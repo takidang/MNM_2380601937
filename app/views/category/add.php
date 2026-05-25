@@ -1,62 +1,68 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Thêm danh mục mới</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-light">
-    <div class="container mt-5 mb-5">
-        <div class="row justify-content-center">
-            <div class="col-md-7">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
-                        <h4 class="mb-0"><i class="fa-solid fa-plus-circle me-2"></i>Thêm danh mục mới</h4>
-                        <a href="/Category/list" class="btn btn-light btn-sm">
-                            <i class="fa-solid fa-list me-1"></i>Danh sách
-                        </a>
-                    </div>
-                    <div class="card-body p-4">
-                        <?php if (!empty($errors)): ?>
-                            <div class="alert alert-danger">
-                                <i class="fa-solid fa-circle-exclamation me-2"></i>
-                                <ul class="mb-0 mt-1">
-                                    <?php foreach ($errors as $error): ?>
-                                        <li><?= htmlspecialchars($error) ?></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </div>
-                        <?php endif; ?>
+<?php
+$pageTitle  = 'Thêm danh mục | TECH-SPECTRUM Admin';
+$activeMenu = 'categories';
+include 'app/views/layouts/admin_header.php';
+?>
 
-                        <form action="/Category/add" method="POST">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Tên danh mục <span class="text-danger">*</span></label>
-                                <input type="text" name="name" class="form-control"
-                                       value="<?= isset($_POST['name']) ? htmlspecialchars($_POST['name']) : '' ?>"
-                                       placeholder="Nhập tên danh mục" required>
-                            </div>
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <nav class="text-sm text-on-surface-variant mb-2 flex items-center gap-2">
+            <a href="/Category/list" class="hover:text-primary transition">Categories</a>
+            <span class="material-symbols-outlined text-base">chevron_right</span>
+            <span class="text-on-surface">Thêm danh mục</span>
+        </nav>
+        <h1 class="text-3xl font-bold">Thêm danh mục mới</h1>
+    </div>
+    <a href="/Category/list" class="bg-surface-container hover:bg-surface-container-high text-on-surface px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 border border-outline-variant/30 transition">
+        <span class="material-symbols-outlined text-base">arrow_back</span>
+        Quay lại
+    </a>
+</div>
 
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold">Mô tả</label>
-                                <textarea name="description" class="form-control" rows="3"
-                                          placeholder="Mô tả ngắn về danh mục..."><?= isset($_POST['description']) ? htmlspecialchars($_POST['description']) : '' ?></textarea>
-                            </div>
+<?php if (!empty($errors)): ?>
+    <div class="bg-error-container/20 border border-error/40 text-error rounded-lg p-4 mb-6 text-sm">
+        <ul class="list-disc list-inside space-y-1">
+            <?php foreach ($errors as $err): ?>
+                <li><?= htmlspecialchars($err) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
 
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-success px-4">
-                                    <i class="fa-solid fa-floppy-disk me-1"></i>Lưu danh mục
-                                </button>
-                                <a href="/Category/list" class="btn btn-outline-secondary">
-                                    <i class="fa-solid fa-xmark me-1"></i>Hủy bỏ
-                                </a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+<form action="/Category/add" method="POST" class="max-w-2xl">
+    <div class="bg-surface-container rounded-xl border border-outline-variant/20 p-6 mb-6">
+        <h2 class="text-lg font-bold mb-5 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">create_new_folder</span>
+            Thông tin danh mục
+        </h2>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-2">Tên danh mục <span class="text-error">*</span></label>
+                <input type="text" name="name" required
+                       value="<?= htmlspecialchars($_POST['name'] ?? '') ?>"
+                       placeholder="VD: Laptop Gaming"
+                       class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Mô tả</label>
+                <textarea name="description" rows="4"
+                          placeholder="Mô tả ngắn về danh mục này..."
+                          class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm resize-none"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+
+    <div class="flex gap-3">
+        <button type="submit" class="bg-primary-container hover:bg-primary-container/90 text-white rounded-lg px-6 py-3 font-semibold flex items-center gap-2 transition glow-btn">
+            <span class="material-symbols-outlined text-base">save</span>
+            Lưu danh mục
+        </button>
+        <a href="/Category/list" class="bg-surface-container-high hover:bg-surface-bright text-on-surface rounded-lg px-6 py-3 font-medium transition border border-outline-variant/30">
+            Hủy bỏ
+        </a>
+    </div>
+</form>
+
+<?php include 'app/views/layouts/admin_footer.php'; ?>

@@ -1,114 +1,179 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Quản lý sản phẩm</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .product-thumb {
-            width: 60px; height: 60px; object-fit: cover;
-            border-radius: 8px; border: 1px solid #dee2e6;
-        }
-        .no-img {
-            width: 60px; height: 60px; border-radius: 8px;
-            background: #f1f3f5; display: flex; align-items: center;
-            justify-content: center; color: #adb5bd;
-        }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="container mt-5 mb-5">
+<?php
+$pageTitle  = 'Product Management | TECH-SPECTRUM Admin';
+$activeMenu = 'inventory';
+include 'app/views/layouts/admin_header.php';
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="text-primary mb-1"><i class="fa-solid fa-boxes-stacked me-2"></i>Quản lý sản phẩm</h2>
-                <small class="text-muted">Tổng: <?= isset($products) ? count($products) : 0 ?> sản phẩm hiện có</small>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="/" class="btn btn-outline-secondary btn-sm d-flex align-items-center">
-                    <i class="fa-solid fa-house me-1"></i>Trang chủ
-                </a>
-                <a href="/Category/list" class="btn btn-outline-info btn-sm d-flex align-items-center">
-                    <i class="fa-solid fa-tags me-1"></i>Quản lý danh mục
-                </a>
-                <a href="/Product/add" class="btn btn-success d-flex align-items-center">
-                    <i class="fa-solid fa-plus me-1"></i>Thêm sản phẩm mới
-                </a>
-            </div>
-        </div>
+$totalProducts   = count($products);
+$activeCategories = count($categories ?? []);
+?>
 
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th style="width: 70px">ID</th>
-                                <th style="width: 90px">Ảnh</th>
-                                <th>Tên sản phẩm</th>
-                                <th>Danh mục</th>
-                                <th class="text-end">Giá</th>
-                                <th>Mô tả</th>
-                                <th class="text-center" style="width: 150px">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($products)): ?>
-                                <?php foreach ($products as $product): ?>
-                                    <tr>
-                                        <td class="text-muted fw-semibold">#<?= $product->getID() ?></td>
-                                        <td>
-                                            <?php if ($product->getImage()): ?>
-                                                <img src="/public/images/products/<?= htmlspecialchars($product->getImage()) ?>"
-                                                     class="product-thumb" alt="<?= htmlspecialchars($product->getName()) ?>">
-                                            <?php else: ?>
-                                                <div class="no-img"><i class="fa-solid fa-image"></i></div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="fw-semibold"><?= htmlspecialchars($product->getName()) ?></td>
-                                        <td>
-                                            <span class="badge bg-info bg-opacity-10 text-info px-2 py-1 rounded-pill">
-                                                <?= htmlspecialchars($product->getCategoryName() ?: 'Khác') ?>
-                                            </span>
-                                        </td>
-                                        <td class="text-end text-danger fw-bold">
-                                            <?= number_format($product->getPrice(), 0, ',', '.') ?> đ
-                                        </td>
-                                        <td class="text-muted small" style="max-width: 250px;">
-                                            <?= htmlspecialchars(mb_strimwidth($product->getDescription() ?? '', 0, 80, '...')) ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <a href="/Product/edit/<?= $product->getID() ?>"
-                                               class="btn btn-sm btn-warning me-1 text-white"
-                                               title="Sửa sản phẩm">
-                                                <i class="fa-solid fa-pen"></i>
-                                            </a>
-                                            <a href="/Product/delete/<?= $product->getID() ?>"
-                                               class="btn btn-sm btn-danger"
-                                               onclick="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?')"
-                                               title="Xóa sản phẩm">
-                                                <i class="fa-solid fa-trash"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="fa-solid fa-box-open fa-3x mb-3 d-block text-secondary"></i>
-                                        Chưa có sản phẩm nào.
-                                        <a href="/Product/add" class="text-success fw-semibold d-block mt-2">Thêm sản phẩm đầu tiên!</a>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+<!-- HEADER -->
+<div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+    <div>
+        <h1 class="text-4xl font-bold mb-2">Product Management</h1>
+        <p class="text-on-surface-variant text-sm">Manage your high-performance hardware inventory.</p>
+    </div>
+    <div class="flex gap-2">
+        <button class="bg-surface-container hover:bg-surface-container-high text-on-surface px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 border border-outline-variant/30 transition">
+            <span class="material-symbols-outlined text-base">download</span>
+            Export CSV
+        </button>
+        <a href="/Product/add" class="bg-primary-container hover:bg-primary-container/90 text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition glow-btn">
+            <span class="material-symbols-outlined text-base">add</span>
+            Thêm sản phẩm
+        </a>
+    </div>
+</div>
+
+<!-- STATS CARDS -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/20">
+        <div class="text-xs font-semibold tracking-widest text-on-surface-variant mb-3">TOTAL INVENTORY</div>
+        <div class="flex items-end gap-2">
+            <div class="text-3xl font-bold"><?= number_format($totalProducts) ?></div>
+            <div class="text-secondary-container text-xs mb-1">Sản phẩm</div>
         </div>
     </div>
+    <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/20">
+        <div class="text-xs font-semibold tracking-widest text-on-surface-variant mb-3">LOW STOCK</div>
+        <div class="flex items-end gap-2">
+            <div class="text-3xl font-bold text-error">0</div>
+            <div class="text-error text-xs mb-1">Cần bổ sung</div>
+        </div>
+    </div>
+    <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/20">
+        <div class="text-xs font-semibold tracking-widest text-on-surface-variant mb-3">ACTIVE CATEGORIES</div>
+        <div class="flex items-end gap-2">
+            <div class="text-3xl font-bold"><?= $activeCategories ?></div>
+            <div class="text-on-surface-variant text-xs mb-1">Danh mục</div>
+        </div>
+    </div>
+    <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/20">
+        <div class="text-xs font-semibold tracking-widest text-on-surface-variant mb-3">NEW ARRIVALS</div>
+        <div class="flex items-end gap-2">
+            <div class="text-3xl font-bold"><?= min($totalProducts, 48) ?></div>
+            <div class="text-secondary-container text-xs mb-1">Tháng này</div>
+        </div>
+    </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<!-- MAIN PANEL -->
+<div class="bg-surface-container rounded-xl border border-outline-variant/20 overflow-hidden">
+
+    <!-- Filter row -->
+    <div class="p-5 border-b border-outline-variant/20 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+        <div class="flex-1 bg-surface-container-low rounded-lg flex items-center px-4 border border-outline-variant/30 focus-within:border-primary transition">
+            <span class="material-symbols-outlined text-on-surface-variant text-base mr-2">search</span>
+            <input type="text" placeholder="Search by product name, SKU, or brand..."
+                   class="bg-transparent border-0 outline-none text-sm flex-1 py-2.5 text-on-surface placeholder:text-on-surface-variant">
+        </div>
+        <select class="bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:outline-none">
+            <option>All Categories</option>
+        </select>
+        <select class="bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:outline-none">
+            <option>Status: All</option>
+        </select>
+    </div>
+
+    <!-- TABLE -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="text-xs tracking-widest font-semibold text-on-surface-variant uppercase border-b border-outline-variant/20">
+                <tr>
+                    <th class="w-12 p-4"><input type="checkbox" class="accent-primary rounded"></th>
+                    <th class="text-left p-4">Product Name</th>
+                    <th class="text-left p-4">Category</th>
+                    <th class="text-left p-4">Price</th>
+                    <th class="text-left p-4">Inventory</th>
+                    <th class="text-left p-4">Status</th>
+                    <th class="text-right p-4 pr-6">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm">
+                <?php if (!empty($products)): foreach ($products as $product): ?>
+                    <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low transition">
+                        <td class="p-4"><input type="checkbox" class="accent-primary rounded"></td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-lg bg-surface-container-low overflow-hidden flex items-center justify-center shrink-0">
+                                    <?php if ($product->getImage()): ?>
+                                        <img src="/public/images/products/<?= htmlspecialchars($product->getImage()) ?>" class="w-full h-full object-cover" alt="">
+                                    <?php else: ?>
+                                        <span class="material-symbols-outlined text-on-surface-variant text-base">image</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <div class="font-semibold line-clamp-1 max-w-xs"><?= htmlspecialchars($product->getName()) ?></div>
+                                    <div class="text-on-surface-variant text-xs font-mono">SKU: SP-<?= str_pad($product->getID(), 5, '0', STR_PAD_LEFT) ?></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <span class="bg-primary-container/30 text-primary px-2 py-1 rounded text-xs font-semibold tracking-widest uppercase">
+                                <?= htmlspecialchars($product->getCategoryName() ?: 'OTHER') ?>
+                            </span>
+                        </td>
+                        <td class="p-4 font-medium"><?= number_format($product->getPrice(), 0, ',', '.') ?>đ</td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-20 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary" style="width: <?= rand(40, 90) ?>%"></div>
+                                </div>
+                                <span class="text-on-surface-variant text-xs"><?= rand(10, 200) ?></span>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-2 text-secondary-container text-xs font-medium">
+                                <div class="w-2 h-2 rounded-full bg-secondary-container"></div>
+                                <span>Active</span>
+                            </div>
+                        </td>
+                        <td class="p-4 pr-6">
+                            <div class="flex items-center gap-1 justify-end">
+                                <a href="/Shop/detail/<?= $product->getID() ?>" target="_blank"
+                                   class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition text-on-surface-variant hover:text-primary"
+                                   title="Xem">
+                                    <span class="material-symbols-outlined text-base">visibility</span>
+                                </a>
+                                <a href="/Product/edit/<?= $product->getID() ?>"
+                                   class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition text-on-surface-variant hover:text-primary"
+                                   title="Sửa">
+                                    <span class="material-symbols-outlined text-base">edit</span>
+                                </a>
+                                <a href="/Product/delete/<?= $product->getID() ?>"
+                                   onclick="return confirm('Xóa sản phẩm này?')"
+                                   class="w-8 h-8 rounded-lg hover:bg-error-container/30 flex items-center justify-center transition text-on-surface-variant hover:text-error"
+                                   title="Xóa">
+                                    <span class="material-symbols-outlined text-base">delete</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; else: ?>
+                    <tr>
+                        <td colspan="7" class="text-center py-16 text-on-surface-variant">
+                            <span class="material-symbols-outlined" style="font-size: 60px">inventory_2</span>
+                            <p class="mt-3">Chưa có sản phẩm nào. <a href="/Product/add" class="text-primary hover:underline">Thêm sản phẩm đầu tiên</a></p>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer pagination -->
+    <div class="p-4 border-t border-outline-variant/20 flex items-center justify-between text-sm">
+        <span class="text-on-surface-variant">Showing 1-<?= count($products) ?> of <?= count($products) ?> products</span>
+        <div class="flex items-center gap-1">
+            <button class="w-9 h-9 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition">
+                <span class="material-symbols-outlined text-base">chevron_left</span>
+            </button>
+            <button class="w-9 h-9 rounded-lg bg-primary-container text-white flex items-center justify-center text-xs font-semibold">1</button>
+            <button class="w-9 h-9 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition">
+                <span class="material-symbols-outlined text-base">chevron_right</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<?php include 'app/views/layouts/admin_footer.php'; ?>

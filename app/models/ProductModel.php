@@ -132,5 +132,32 @@ class ProductModel
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
+
+    // 6. Lấy danh sách sản phẩm theo danh mục
+    public function getProductsByCategory($category_id)
+    {
+        $query = "SELECT p.*, c.name AS category_name
+                  FROM " . $this->table_name . " p
+                  LEFT JOIN category c ON p.category_id = c.id
+                  WHERE p.category_id = :category_id
+                  ORDER BY p.id DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':category_id', $category_id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $products = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $product = new ProductModel($this->conn);
+            $product->id            = $row['id'];
+            $product->name          = $row['name'];
+            $product->description   = $row['description'];
+            $product->price         = $row['price'];
+            $product->image         = $row['image'];
+            $product->category_id   = $row['category_id'];
+            $product->category_name = $row['category_name'];
+            $products[] = $product;
+        }
+        return $products;
+    }
 }
 ?>

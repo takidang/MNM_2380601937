@@ -1,150 +1,147 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Thêm sản phẩm mới</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .img-drop-zone {
-            height: 200px;
-            border: 2px dashed #ced4da;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            cursor: pointer;
-            color: #adb5bd;
-            transition: border-color 0.2s, background 0.2s;
-        }
-        .img-drop-zone:hover { border-color: #0d6efd; background: #f0f5ff; color: #0d6efd; }
-        .img-preview { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; border: 2px solid #dee2e6; }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="container mt-5 mb-5">
-        <div class="row justify-content-center">
-            <div class="col-md-7">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
-                        <h4 class="mb-0"><i class="fa-solid fa-plus-circle me-2"></i>Thêm sản phẩm mới</h4>
-                        <a href="/Product/list" class="btn btn-light btn-sm">
-                            <i class="fa-solid fa-list me-1"></i>Danh sách
-                        </a>
+<?php
+$pageTitle  = 'Thêm sản phẩm | TECH-SPECTRUM Admin';
+$activeMenu = 'inventory';
+include 'app/views/layouts/admin_header.php';
+?>
+
+<!-- HEADER -->
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <nav class="text-sm text-on-surface-variant mb-2 flex items-center gap-2">
+            <a href="/Product/list" class="hover:text-primary transition">Inventory</a>
+            <span class="material-symbols-outlined text-base">chevron_right</span>
+            <span class="text-on-surface">Thêm sản phẩm</span>
+        </nav>
+        <h1 class="text-3xl font-bold">Thêm sản phẩm mới</h1>
+    </div>
+    <a href="/Product/list" class="bg-surface-container hover:bg-surface-container-high text-on-surface px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 border border-outline-variant/30 transition">
+        <span class="material-symbols-outlined text-base">arrow_back</span>
+        Quay lại
+    </a>
+</div>
+
+<?php if (!empty($errors)): ?>
+    <div class="bg-error-container/20 border border-error/40 text-error rounded-lg p-4 mb-6 text-sm">
+        <ul class="list-disc list-inside space-y-1">
+            <?php foreach ($errors as $err): ?>
+                <li><?= htmlspecialchars($err) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
+
+<form action="/Product/add" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
+
+    <!-- LEFT: BASIC INFO -->
+    <div class="space-y-6">
+        <div class="bg-surface-container rounded-xl border border-outline-variant/20 p-6">
+            <h2 class="text-lg font-bold mb-5 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">edit_note</span>
+                Thông tin cơ bản
+            </h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Tên sản phẩm <span class="text-error">*</span></label>
+                    <input type="text" name="name" required
+                           value="<?= htmlspecialchars($_POST['name'] ?? '') ?>"
+                           placeholder="VD: MacBook Pro M3 Max 14-inch"
+                           class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm">
+                    <p class="text-on-surface-variant text-xs mt-1">10 - 100 ký tự</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Giá bán (đ) <span class="text-error">*</span></label>
+                        <input type="number" name="price" required min="1" max="999999999999" step="1"
+                               value="<?= htmlspecialchars($_POST['price'] ?? '') ?>"
+                               placeholder="VD: 25990000"
+                               class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm font-mono">
                     </div>
-                    <div class="card-body p-4">
-                        <?php if (!empty($errors)): ?>
-                            <div class="alert alert-danger">
-                                <i class="fa-solid fa-circle-exclamation me-2"></i>
-                                <ul class="mb-0 mt-1">
-                                    <?php foreach ($errors as $error): ?>
-                                        <li><?= htmlspecialchars($error) ?></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </div>
-                        <?php endif; ?>
-
-                        <form action="/Product/add" method="POST" enctype="multipart/form-data">
-
-                            <!-- Ảnh sản phẩm -->
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold">Ảnh sản phẩm</label>
-                                <div class="img-drop-zone" id="dropZone" onclick="document.getElementById('imageInput').click()">
-                                    <i class="fa-solid fa-cloud-arrow-up fa-2x mb-2"></i>
-                                    <span class="fw-semibold">Nhấn để chọn ảnh</span>
-                                    <small>JPG, PNG, GIF, WEBP &bull; Tối đa 5MB</small>
-                                </div>
-                                <img id="imgPreview" class="img-preview mt-2 d-none" alt="Xem trước ảnh">
-                                <input type="file" id="imageInput" name="image" accept="image/*" class="d-none">
-                                <button type="button" id="removeImg" class="btn btn-sm btn-outline-danger mt-2 d-none"
-                                    onclick="clearImage()">
-                                    <i class="fa-solid fa-trash me-1"></i>Xóa ảnh
-                                </button>
-                            </div>
-
-                            <!-- Tên sản phẩm -->
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Tên sản phẩm <span class="text-danger">*</span></label>
-                                <input type="text" name="name" class="form-control"
-                                       value="<?= isset($_POST['name']) ? htmlspecialchars($_POST['name']) : '' ?>"
-                                       placeholder="Nhập tên sản phẩm (10–100 ký tự)" required>
-                                <div class="form-text">Từ 10 đến 100 ký tự</div>
-                            </div>
-
-                            <!-- Giá & Danh mục -->
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Giá sản phẩm <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" name="price" class="form-control"
-                                               value="<?= isset($_POST['price']) ? htmlspecialchars($_POST['price']) : '' ?>"
-                                               placeholder="0" min="1" step="0.01" required>
-                                        <span class="input-group-text">VNĐ</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Danh mục <span class="text-danger">*</span></label>
-                                    <select name="category_id" class="form-select" required>
-                                        <option value="">-- Chọn danh mục --</option>
-                                        <?php
-                                        $selectedCat = $_POST['category_id'] ?? '';
-                                        if (!empty($categories)):
-                                            foreach ($categories as $cat): ?>
-                                                <option value="<?= htmlspecialchars($cat->id) ?>"
-                                                    <?= ((string)$selectedCat === (string)$cat->id) ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($cat->name) ?>
-                                                </option>
-                                        <?php endforeach;
-                                        endif; ?>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Mô tả -->
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold">Mô tả sản phẩm</label>
-                                <textarea name="description" class="form-control" rows="3"
-                                          placeholder="Nhập mô tả ngắn về sản phẩm..."><?= isset($_POST['description']) ? htmlspecialchars($_POST['description']) : '' ?></textarea>
-                            </div>
-
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-success px-4">
-                                    <i class="fa-solid fa-floppy-disk me-1"></i>Lưu sản phẩm
-                                </button>
-                                <a href="/Product/list" class="btn btn-outline-secondary">
-                                    <i class="fa-solid fa-xmark me-1"></i>Hủy bỏ
-                                </a>
-                            </div>
-                        </form>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Danh mục <span class="text-error">*</span></label>
+                        <select name="category_id" required class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm">
+                            <option value="">-- Chọn danh mục --</option>
+                            <?php
+                            $selectedCat = $_POST['category_id'] ?? '';
+                            foreach ($categories as $cat): ?>
+                                <option value="<?= htmlspecialchars($cat->id) ?>"
+                                    <?= ((string)$selectedCat === (string)$cat->id) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($cat->name) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Mô tả sản phẩm</label>
+                    <textarea name="description" rows="5"
+                              placeholder="Mô tả chi tiết tính năng, thông số kỹ thuật..."
+                              class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm resize-none"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        document.getElementById('imageInput').addEventListener('change', function () {
-            const file = this.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                document.getElementById('dropZone').classList.add('d-none');
-                const preview = document.getElementById('imgPreview');
-                preview.src = e.target.result;
-                preview.classList.remove('d-none');
-                document.getElementById('removeImg').classList.remove('d-none');
-            };
-            reader.readAsDataURL(file);
-        });
+    <!-- RIGHT: IMAGE + ACTION -->
+    <div class="space-y-6">
+        <div class="bg-surface-container rounded-xl border border-outline-variant/20 p-6">
+            <h2 class="text-lg font-bold mb-5 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">image</span>
+                Ảnh sản phẩm
+            </h2>
 
-        function clearImage() {
-            document.getElementById('imageInput').value = '';
-            document.getElementById('imgPreview').classList.add('d-none');
-            document.getElementById('imgPreview').src = '';
-            document.getElementById('removeImg').classList.add('d-none');
-            document.getElementById('dropZone').classList.remove('d-none');
-        }
-    </script>
-</body>
-</html>
+            <label for="imageInput" class="block">
+                <div id="dropZone" class="aspect-square border-2 border-dashed border-outline-variant/40 hover:border-primary rounded-xl flex flex-col items-center justify-center cursor-pointer transition text-on-surface-variant hover:text-primary">
+                    <span class="material-symbols-outlined text-5xl mb-2">cloud_upload</span>
+                    <p class="font-medium">Nhấn để chọn ảnh</p>
+                    <p class="text-xs mt-1">JPG, PNG, GIF, WEBP • Tối đa 5MB</p>
+                </div>
+                <img id="imgPreview" class="hidden aspect-square w-full rounded-xl object-cover border border-outline-variant/30" alt="">
+            </label>
+            <input type="file" id="imageInput" name="image" accept="image/*" class="hidden">
+
+            <button type="button" id="removeImg" onclick="clearImage()" class="hidden w-full mt-3 bg-error-container/20 text-error hover:bg-error-container/30 rounded-lg py-2 text-sm font-medium transition flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-base">delete</span>
+                Xóa ảnh
+            </button>
+        </div>
+
+        <div class="bg-surface-container rounded-xl border border-outline-variant/20 p-6 space-y-3">
+            <button type="submit" class="w-full bg-primary-container hover:bg-primary-container/90 text-white rounded-lg py-3 font-semibold flex items-center justify-center gap-2 transition glow-btn">
+                <span class="material-symbols-outlined text-base">save</span>
+                Lưu sản phẩm
+            </button>
+            <a href="/Product/list" class="block w-full text-center bg-surface-container-high hover:bg-surface-bright text-on-surface rounded-lg py-3 font-medium transition border border-outline-variant/30">
+                Hủy bỏ
+            </a>
+        </div>
+    </div>
+</form>
+
+<script>
+document.getElementById('imageInput').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('dropZone').classList.add('hidden');
+        const preview = document.getElementById('imgPreview');
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+        document.getElementById('removeImg').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+});
+
+function clearImage() {
+    document.getElementById('imageInput').value = '';
+    document.getElementById('imgPreview').classList.add('hidden');
+    document.getElementById('imgPreview').src = '';
+    document.getElementById('removeImg').classList.add('hidden');
+    document.getElementById('dropZone').classList.remove('hidden');
+}
+</script>
+
+<?php include 'app/views/layouts/admin_footer.php'; ?>
