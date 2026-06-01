@@ -3,6 +3,7 @@ require_once 'app/config/database.php';
 require_once 'app/models/ProductModel.php';
 require_once 'app/models/CategoryModel.php';
 require_once 'app/models/OrderModel.php';
+require_once 'app/helpers/SessionHelper.php';
 
 class AdminController
 {
@@ -12,6 +13,9 @@ class AdminController
 
     public function __construct()
     {
+        // PHÂN QUYỀN: Khu vực quản trị chỉ dành cho admin.
+        SessionHelper::requireAdmin();
+
         $database = new Database();
         $db = $database->getConnection();
         $this->productModel  = new ProductModel($db);

@@ -1,5 +1,8 @@
 <?php
 // Admin layout - Biến cần: $pageTitle, $activeMenu (dashboard|inventory|categories|orders|analytics)
+require_once 'app/helpers/SessionHelper.php';
+$adminName   = SessionHelper::displayName();
+$adminAvatar = SessionHelper::avatarUrl();
 $activeMenu = $activeMenu ?? '';
 $pageTitle  = $pageTitle  ?? 'Admin Portal | TECH-SPECTRUM';
 ?>
@@ -83,6 +86,10 @@ tailwind.config = {
             <span class="material-symbols-outlined text-base">shopping_cart</span>
             <span>Orders</span>
         </a>
+        <a href="/User/list" class="flex items-center gap-3 px-6 py-3 hover:bg-surface-container transition <?= $activeMenu==='users' ? 'sidebar-link-active' : 'text-on-surface' ?>">
+            <span class="material-symbols-outlined text-base">group</span>
+            <span>Users</span>
+        </a>
         <a href="#" class="flex items-center gap-3 px-6 py-3 hover:bg-surface-container transition <?= $activeMenu==='analytics' ? 'sidebar-link-active' : 'text-on-surface' ?>">
             <span class="material-symbols-outlined text-base">bar_chart</span>
             <span>Analytics</span>
@@ -97,11 +104,28 @@ tailwind.config = {
     </div>
 
     <div class="px-6 pt-6 mt-6 border-t border-outline-variant/30 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-white font-bold">A</div>
-        <div>
-            <div class="text-sm font-semibold text-on-surface">Admin Portal</div>
+        <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-container flex items-center justify-center text-white font-bold uppercase">
+            <?php if ($adminAvatar): ?>
+                <img src="<?= htmlspecialchars($adminAvatar) ?>" class="w-full h-full object-cover" alt="">
+            <?php else: ?>
+                <?= htmlspecialchars(mb_substr($adminName, 0, 1)) ?>
+            <?php endif; ?>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-on-surface truncate"><?= htmlspecialchars($adminName) ?></div>
             <div class="text-xs text-on-surface-variant">System Controller</div>
         </div>
+    </div>
+
+    <div class="px-6 mt-3 flex flex-col gap-1">
+        <a href="/" class="flex items-center gap-2 text-xs text-on-surface-variant hover:text-primary px-2 py-2 rounded-lg hover:bg-surface-container transition">
+            <span class="material-symbols-outlined" style="font-size:16px">storefront</span>
+            <span>Về trang cửa hàng</span>
+        </a>
+        <a href="/Auth/logout" class="flex items-center gap-2 text-xs text-on-surface-variant hover:text-error px-2 py-2 rounded-lg hover:bg-surface-container transition">
+            <span class="material-symbols-outlined" style="font-size:16px">logout</span>
+            <span>Đăng xuất</span>
+        </a>
     </div>
 </aside>
 

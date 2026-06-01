@@ -1,6 +1,7 @@
 <?php
 require_once 'app/config/database.php';
 require_once 'app/models/CategoryModel.php';
+require_once 'app/helpers/SessionHelper.php';
 
 class CategoryController
 {
@@ -8,6 +9,9 @@ class CategoryController
 
     public function __construct()
     {
+        // PHÂN QUYỀN: Quản lý danh mục chỉ dành cho admin.
+        SessionHelper::requireAdmin();
+
         $database = new Database();
         $db = $database->getConnection();
         $this->categoryModel = new CategoryModel($db);
