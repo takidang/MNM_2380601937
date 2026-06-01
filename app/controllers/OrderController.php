@@ -3,6 +3,7 @@ require_once 'app/config/database.php';
 require_once 'app/models/OrderModel.php';
 require_once 'app/models/OrderDetailModel.php';
 require_once 'app/models/ProductModel.php';
+require_once 'app/helpers/SessionHelper.php';
 
 class OrderController
 {
@@ -12,6 +13,9 @@ class OrderController
 
     public function __construct()
     {
+        // PHÂN QUYỀN: Quản lý đơn hàng chỉ dành cho admin.
+        SessionHelper::requireAdmin();
+
         $database = new Database();
         $db = $database->getConnection();
 

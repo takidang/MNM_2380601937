@@ -1,4 +1,24 @@
 <?php
+// Nạp lớp trợ giúp phân quyền và khởi tạo session cho toàn bộ ứng dụng
+require_once 'app/helpers/SessionHelper.php';
+SessionHelper::start();
+
+// ===== GHI NHỚ ĐĂNG NHẬP (Remember Me) =====
+// Nếu chưa đăng nhập nhưng có cookie remember_token hợp lệ → tự đăng nhập lại.
+if (!SessionHelper::isLoggedIn() && isset($_COOKIE[SessionHelper::REMEMBER_COOKIE])) {
+    require_once 'app/config/database.php';
+    require_once 'app/models/UserModel.php';
+    $db = (new Database())->getConnection();
+    if ($db) {
+        $rememberUser = (new UserModel($db))->findByRememberToken($_COOKIE[SessionHelper::REMEMBER_COOKIE]);
+        if ($rememberUser) {
+            SessionHelper::login($rememberUser);
+        } else {
+            SessionHelper::clearRememberCookie(); // cookie không hợp lệ → xóa
+        }
+    }
+}
+
 require_once 'app/models/ProductModel.php';
 $url = $_GET['url'] ?? '';
 $url = rtrim($url, '/');

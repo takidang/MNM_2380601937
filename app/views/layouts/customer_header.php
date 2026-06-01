@@ -6,6 +6,11 @@ $pageTitle  = $pageTitle  ?? 'TECH-SPECTRUM | High-Performance Hardware';
 
 // Đếm số item trong giỏ hàng (session)
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once 'app/helpers/SessionHelper.php';
+$__isLoggedIn = SessionHelper::isLoggedIn();
+$__isAdmin    = SessionHelper::isAdmin();
+$__userName   = SessionHelper::displayName();
+$__avatar     = SessionHelper::avatarUrl();
 $cartCount = isset($_SESSION['cart']) ? array_sum(array_column($_SESSION['cart'], 'quantity')) : 0;
 ?>
 <!DOCTYPE html>
@@ -84,10 +89,34 @@ tailwind.config = {
                 <input type="text" placeholder="Search hardware..."
                        class="bg-transparent border-0 outline-none text-sm w-full text-on-surface placeholder:text-on-surface-variant">
             </div>
-            <a href="/Admin/dashboard" class="flex items-center gap-1.5 text-xs bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary px-3 py-2 rounded-lg border border-outline-variant/30 transition font-medium">
-                <span class="material-symbols-outlined" style="font-size:15px">admin_panel_settings</span>
-                <span>Quản trị</span>
-            </a>
+            <?php if ($__isAdmin): ?>
+                <a href="/Admin/dashboard" class="flex items-center gap-1.5 text-xs bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary px-3 py-2 rounded-lg border border-outline-variant/30 transition font-medium">
+                    <span class="material-symbols-outlined" style="font-size:15px">admin_panel_settings</span>
+                    <span>Quản trị</span>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($__isLoggedIn): ?>
+                <a href="/Profile" class="hidden sm:flex items-center gap-2 text-xs text-on-surface-variant hover:text-primary px-2 py-1 rounded-lg transition" title="Hồ sơ cá nhân">
+                    <span class="w-7 h-7 rounded-full overflow-hidden bg-primary-container flex items-center justify-center text-white text-xs font-bold">
+                        <?php if ($__avatar): ?>
+                            <img src="<?= htmlspecialchars($__avatar) ?>" class="w-full h-full object-cover" alt="">
+                        <?php else: ?>
+                            <?= htmlspecialchars(strtoupper(mb_substr($__userName, 0, 1))) ?>
+                        <?php endif; ?>
+                    </span>
+                    <span><?= htmlspecialchars($__userName) ?></span>
+                </a>
+                <a href="/Auth/logout" class="flex items-center gap-1.5 text-xs bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-error px-3 py-2 rounded-lg border border-outline-variant/30 transition font-medium">
+                    <span class="material-symbols-outlined" style="font-size:15px">logout</span>
+                    <span>Đăng xuất</span>
+                </a>
+            <?php else: ?>
+                <a href="/Auth/login" class="flex items-center gap-1.5 text-xs bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary px-3 py-2 rounded-lg border border-outline-variant/30 transition font-medium">
+                    <span class="material-symbols-outlined" style="font-size:15px">login</span>
+                    <span>Đăng nhập</span>
+                </a>
+            <?php endif; ?>
             <a href="/Cart/list" class="relative bg-primary-container hover:bg-primary-container/90 text-white rounded-lg px-4 py-2 flex items-center gap-2 transition glow-btn font-medium text-sm">
                 <span class="material-symbols-outlined text-base">shopping_cart</span>
                 <span>Cart</span>
@@ -101,3 +130,20 @@ tailwind.config = {
 
 <!-- MAIN CONTENT -->
 <main class="max-w-[1280px] mx-auto px-4 md:px-12 py-8">
+
+<?php
+$__flashError   = SessionHelper::getFlash('error');
+$__flashSuccess = SessionHelper::getFlash('success');
+?>
+<?php if ($__flashError): ?>
+    <div class="bg-error-container/40 border border-error/40 text-error rounded-lg p-3 mb-6 text-sm flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">block</span>
+        <span><?= htmlspecialchars($__flashError) ?></span>
+    </div>
+<?php endif; ?>
+<?php if ($__flashSuccess): ?>
+    <div class="bg-primary-container/20 border border-primary/40 text-primary rounded-lg p-3 mb-6 text-sm flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">check_circle</span>
+        <span><?= htmlspecialchars($__flashSuccess) ?></span>
+    </div>
+<?php endif; ?>

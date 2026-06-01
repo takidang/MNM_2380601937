@@ -2,6 +2,7 @@
 require_once 'app/config/database.php';
 require_once 'app/models/ProductModel.php';
 require_once 'app/models/CategoryModel.php'; // Cần gọi thêm CategoryModel để hiển thị danh sách chọn
+require_once 'app/helpers/SessionHelper.php';
 
 class ProductController
 {
@@ -11,6 +12,10 @@ class ProductController
 
     public function __construct()
     {
+        // PHÂN QUYỀN: Toàn bộ chức năng quản lý sản phẩm (thêm/sửa/xóa/danh sách kho)
+        // chỉ dành cho admin. Khách hàng xem sản phẩm qua ShopController.
+        SessionHelper::requireAdmin();
+
         // Khởi tạo kết nối DB và gán vào các Model tương ứng
         $database = new Database();
         $db = $database->getConnection();
