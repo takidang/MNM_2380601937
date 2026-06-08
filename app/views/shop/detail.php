@@ -2,6 +2,13 @@
 $pageTitle  = $product->getName() . ' | TECH-SPECTRUM';
 $activeMenu = '';
 include 'app/views/layouts/customer_header.php';
+
+// Build full image list: main image first, then extras (avoid duplicates)
+$allImages = [];
+if ($product->getImage()) $allImages[] = $product->getImage();
+foreach ($productImages as $img) {
+    if ($img->filename !== $product->getImage()) $allImages[] = $img->filename;
+}
 ?>
 
 <!-- BREADCRUMB -->
@@ -19,8 +26,9 @@ include 'app/views/layouts/customer_header.php';
     <div>
         <div class="bg-surface-container rounded-xl overflow-hidden aspect-square relative border border-outline-variant/20 mb-4">
             <span class="absolute top-4 left-4 bg-primary-container/40 text-primary text-xs font-bold tracking-widest px-3 py-1 rounded z-10">TECH SPEC ELITE</span>
-            <?php if ($product->getImage()): ?>
-                <img src="/public/images/products/<?= htmlspecialchars($product->getImage()) ?>"
+            <?php if (!empty($allImages)): ?>
+                <img id="mainImage"
+                     src="/public/images/products/<?= htmlspecialchars($allImages[0]) ?>"
                      alt="<?= htmlspecialchars($product->getName()) ?>"
                      class="w-full h-full object-cover">
             <?php else: ?>
@@ -31,20 +39,22 @@ include 'app/views/layouts/customer_header.php';
         </div>
 
         <!-- Thumbnail row -->
+        <?php if (count($allImages) > 1): ?>
         <div class="grid grid-cols-4 gap-3">
-            <?php for ($i = 0; $i < 4; $i++): ?>
-                <div class="aspect-square bg-surface-container rounded-lg border <?= $i===0 ? 'border-primary' : 'border-outline-variant/20' ?> hover:border-primary transition cursor-pointer flex items-center justify-center overflow-hidden">
-                    <?php if ($i === 3): ?>
-                        <span class="text-on-surface-variant text-sm font-medium">+5</span>
-                    <?php elseif ($product->getImage()): ?>
-                        <img src="/public/images/products/<?= htmlspecialchars($product->getImage()) ?>"
-                             alt="thumb" class="w-full h-full object-cover opacity-70 hover:opacity-100 transition">
-                    <?php else: ?>
-                        <span class="material-symbols-outlined text-on-surface-variant text-2xl">image</span>
-                    <?php endif; ?>
+            <?php foreach (array_slice($allImages, 0, 4) as $i => $imgFile): ?>
+                <div onclick="switchImage('/public/images/products/<?= htmlspecialchars($imgFile) ?>', this)"
+                     class="aspect-square bg-surface-container rounded-lg border <?= $i===0 ? 'border-primary' : 'border-outline-variant/20' ?> hover:border-primary transition cursor-pointer overflow-hidden thumb-item">
+                    <img src="/public/images/products/<?= htmlspecialchars($imgFile) ?>"
+                         alt="thumb" class="w-full h-full object-cover opacity-80 hover:opacity-100 transition">
                 </div>
-            <?php endfor; ?>
+            <?php endforeach; ?>
+            <?php if (count($allImages) > 4): ?>
+                <div class="aspect-square bg-surface-container rounded-lg border border-outline-variant/20 flex items-center justify-center">
+                    <span class="text-on-surface-variant text-sm font-medium">+<?= count($allImages) - 4 ?></span>
+                </div>
+            <?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- RIGHT: PRODUCT INFO -->
@@ -65,36 +75,34 @@ include 'app/views/layouts/customer_header.php';
         <h1 class="text-3xl font-bold leading-tight"><?= htmlspecialchars($product->getName()) ?></h1>
         <p class="text-on-surface-variant"><?= htmlspecialchars($product->getDescription() ?? '') ?></p>
 
-        <!-- Specs (option groups - placeholder) -->
-        <div class="bg-surface-container rounded-xl p-5 space-y-4 border border-outline-variant/20">
-            <div>
-                <label class="block text-xs font-semibold text-on-surface-variant tracking-widest mb-2">CẤU HÌNH RAM</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button class="bg-surface-container-low border border-primary text-primary rounded-lg py-2 text-sm font-medium">16GB</button>
-                    <button class="bg-surface-container-low border border-outline-variant/30 text-on-surface rounded-lg py-2 text-sm hover:border-primary transition">32GB</button>
-                    <button class="bg-surface-container-low border border-outline-variant/30 text-on-surface rounded-lg py-2 text-sm hover:border-primary transition">64GB</button>
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-on-surface-variant tracking-widest mb-2">LƯU TRỮ SSD</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button class="bg-surface-container-low border border-outline-variant/30 text-on-surface rounded-lg py-2 text-sm hover:border-primary transition">512GB</button>
-                    <button class="bg-surface-container-low border border-primary text-primary rounded-lg py-2 text-sm font-medium">1TB</button>
-                </div>
+        <!-- Variants -->
+        <?php if (!empty($variants)): ?>
+        <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/20">
+            <label class="block text-xs font-semibold text-on-surface-variant tracking-widest mb-3">CHỌN CẤU HÌNH</label>
+            <div class="flex flex-wrap gap-2">
+                <?php foreach ($variants as $i => $v): ?>
+                    <button type="button"
+                            onclick="selectVariant(this, <?= $v->id ?>, '<?= htmlspecialchars($v->name, ENT_QUOTES) ?>', <?= $v->price ?>)"
+                            class="variant-btn px-4 py-2 rounded-lg text-sm font-medium border transition
+                                   <?= $i === 0 ? 'border-primary text-primary bg-surface-container-low' : 'border-outline-variant/30 text-on-surface hover:border-primary' ?>"
+                            data-price="<?= $v->price ?>">
+                        <?= htmlspecialchars($v->name) ?>
+                    </button>
+                <?php endforeach; ?>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Price -->
         <div>
-            <div class="text-4xl font-bold text-secondary-container">
-                <?= number_format($product->getPrice(), 0, ',', '.') ?>đ
-            </div>
-            <div class="flex items-center gap-2 mt-2">
-                <span class="text-on-surface-variant line-through text-sm"><?= number_format($product->getPrice() * 1.06, 0, ',', '.') ?>đ</span>
-                <span class="bg-error-container/40 text-error text-xs font-bold px-2 py-0.5 rounded">-6% GIẢM</span>
-                <span class="text-on-surface-variant text-sm">Tiết kiệm <?= number_format($product->getPrice() * 0.06, 0, ',', '.') ?>đ</span>
+            <div id="displayPrice" class="text-4xl font-bold text-secondary-container">
+                <?= number_format(!empty($variants) ? $variants[0]->price : $product->getPrice(), 0, ',', '.') ?>đ
             </div>
         </div>
+
+        <!-- Hidden fields for cart -->
+        <input type="hidden" id="selectedVariantId" value="<?= !empty($variants) ? $variants[0]->id : '' ?>">
+        <input type="hidden" id="selectedVariantName" value="<?= !empty($variants) ? htmlspecialchars($variants[0]->name, ENT_QUOTES) : '' ?>">
 
         <!-- CTA Buttons -->
         <div class="space-y-3">
@@ -102,7 +110,8 @@ include 'app/views/layouts/customer_header.php';
                 <span class="material-symbols-outlined">add_shopping_cart</span>
                 <span>Thêm vào giỏ hàng</span>
             </button>
-            <form action="/Cart/buyNow/<?= $product->getID() ?>" method="POST">
+            <form action="/Cart/buyNow/<?= $product->getID() ?>" method="POST" id="buyNowForm">
+                <input type="hidden" name="variant_id" id="buyNowVariantId" value="<?= !empty($variants) ? $variants[0]->id : '' ?>">
                 <button type="submit" class="w-full bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg py-4 font-semibold transition border border-outline-variant/30">
                     Mua ngay
                 </button>
@@ -152,8 +161,32 @@ include 'app/views/layouts/customer_header.php';
 <?php endif; ?>
 
 <script>
+function switchImage(src, el) {
+    document.getElementById('mainImage').src = src;
+    document.querySelectorAll('.thumb-item').forEach(t => t.classList.replace('border-primary', 'border-outline-variant/20'));
+    el.classList.replace('border-outline-variant/20', 'border-primary');
+}
+
+function selectVariant(btn, variantId, variantName, price) {
+    document.querySelectorAll('.variant-btn').forEach(b => {
+        b.classList.remove('border-primary', 'text-primary');
+        b.classList.add('border-outline-variant/30', 'text-on-surface');
+    });
+    btn.classList.add('border-primary', 'text-primary');
+    btn.classList.remove('border-outline-variant/30', 'text-on-surface');
+
+    document.getElementById('displayPrice').textContent = price.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('selectedVariantId').value   = variantId;
+    document.getElementById('selectedVariantName').value = variantName;
+    document.getElementById('buyNowVariantId').value     = variantId;
+}
+
 function addToCart(id, btn) {
-    fetch('/Cart/add/' + id, { method: 'POST' })
+    const variantId   = document.getElementById('selectedVariantId').value;
+    const variantName = document.getElementById('selectedVariantName').value;
+    const body = new URLSearchParams({ variant_id: variantId, variant_name: variantName });
+
+    fetch('/Cart/add/' + id, { method: 'POST', body })
         .then(() => {
             const badge = document.querySelector('.cart-badge');
             if (badge) { badge.classList.remove('hidden'); badge.textContent = parseInt(badge.textContent || 0) + 1; }

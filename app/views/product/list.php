@@ -84,86 +84,23 @@ $activeCategories = count($categories ?? []);
                     <th class="text-left p-4">Product Name</th>
                     <th class="text-left p-4">Category</th>
                     <th class="text-left p-4">Price</th>
-                    <th class="text-left p-4">Inventory</th>
                     <th class="text-left p-4">Status</th>
                     <th class="text-right p-4 pr-6">Actions</th>
                 </tr>
             </thead>
-            <tbody class="text-sm">
-                <?php if (!empty($products)): foreach ($products as $product): ?>
-                    <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low transition">
-                        <td class="p-4"><input type="checkbox" class="accent-primary rounded"></td>
-                        <td class="p-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-lg bg-surface-container-low overflow-hidden flex items-center justify-center shrink-0">
-                                    <?php if ($product->getImage()): ?>
-                                        <img src="/public/images/products/<?= htmlspecialchars($product->getImage()) ?>" class="w-full h-full object-cover" alt="">
-                                    <?php else: ?>
-                                        <span class="material-symbols-outlined text-on-surface-variant text-base">image</span>
-                                    <?php endif; ?>
-                                </div>
-                                <div>
-                                    <div class="font-semibold line-clamp-1 max-w-xs"><?= htmlspecialchars($product->getName()) ?></div>
-                                    <div class="text-on-surface-variant text-xs font-mono">SKU: SP-<?= str_pad($product->getID(), 5, '0', STR_PAD_LEFT) ?></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="p-4">
-                            <span class="bg-primary-container/30 text-primary px-2 py-1 rounded text-xs font-semibold tracking-widest uppercase">
-                                <?= htmlspecialchars($product->getCategoryName() ?: 'OTHER') ?>
-                            </span>
-                        </td>
-                        <td class="p-4 font-medium"><?= number_format($product->getPrice(), 0, ',', '.') ?>đ</td>
-                        <td class="p-4">
-                            <div class="flex items-center gap-2">
-                                <div class="w-20 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                                    <div class="h-full bg-primary" style="width: <?= rand(40, 90) ?>%"></div>
-                                </div>
-                                <span class="text-on-surface-variant text-xs"><?= rand(10, 200) ?></span>
-                            </div>
-                        </td>
-                        <td class="p-4">
-                            <div class="flex items-center gap-2 text-secondary-container text-xs font-medium">
-                                <div class="w-2 h-2 rounded-full bg-secondary-container"></div>
-                                <span>Active</span>
-                            </div>
-                        </td>
-                        <td class="p-4 pr-6">
-                            <div class="flex items-center gap-1 justify-end">
-                                <a href="/Shop/detail/<?= $product->getID() ?>" target="_blank"
-                                   class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition text-on-surface-variant hover:text-primary"
-                                   title="Xem">
-                                    <span class="material-symbols-outlined text-base">visibility</span>
-                                </a>
-                                <a href="/Product/edit/<?= $product->getID() ?>"
-                                   class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition text-on-surface-variant hover:text-primary"
-                                   title="Sửa">
-                                    <span class="material-symbols-outlined text-base">edit</span>
-                                </a>
-                                <a href="/Product/delete/<?= $product->getID() ?>"
-                                   onclick="return confirm('Xóa sản phẩm này?')"
-                                   class="w-8 h-8 rounded-lg hover:bg-error-container/30 flex items-center justify-center transition text-on-surface-variant hover:text-error"
-                                   title="Xóa">
-                                    <span class="material-symbols-outlined text-base">delete</span>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                <?php endforeach; else: ?>
-                    <tr>
-                        <td colspan="7" class="text-center py-16 text-on-surface-variant">
-                            <span class="material-symbols-outlined" style="font-size: 60px">inventory_2</span>
-                            <p class="mt-3">Chưa có sản phẩm nào. <a href="/Product/add" class="text-primary hover:underline">Thêm sản phẩm đầu tiên</a></p>
-                        </td>
-                    </tr>
-                <?php endif; ?>
+            <tbody id="product-table-body" class="text-sm">
+                <tr id="loading-row">
+                    <td colspan="6" class="text-center py-16 text-on-surface-variant">
+                        <span class="material-symbols-outlined animate-spin" style="font-size:40px">progress_activity</span>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
 
     <!-- Footer pagination -->
     <div class="p-4 border-t border-outline-variant/20 flex items-center justify-between text-sm">
-        <span class="text-on-surface-variant">Showing 1-<?= count($products) ?> of <?= count($products) ?> products</span>
+        <span id="pagination-info" class="text-on-surface-variant">Đang tải...</span>
         <div class="flex items-center gap-1">
             <button class="w-9 h-9 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition">
                 <span class="material-symbols-outlined text-base">chevron_left</span>
@@ -175,5 +112,102 @@ $activeCategories = count($categories ?? []);
         </div>
     </div>
 </div>
+
+<script>
+function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatPrice(price) {
+    return Number(price).toLocaleString('vi-VN') + 'đ';
+}
+
+function padId(id) {
+    return 'SP-' + String(id).padStart(5, '0');
+}
+
+async function deleteProduct(id) {
+    if (!confirm('Xóa sản phẩm này?')) return;
+    const res = await fetch('/api/product/' + id, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+        loadProducts();
+    } else {
+        alert(data.error ?? 'Lỗi khi xóa sản phẩm');
+    }
+}
+
+async function loadProducts() {
+    const tbody = document.getElementById('product-table-body');
+    const info  = document.getElementById('pagination-info');
+    try {
+        const res      = await fetch('/api/product');
+        const products = await res.json();
+
+        if (!products.length) {
+            tbody.innerHTML = `<tr>
+                <td colspan="6" class="text-center py-16 text-on-surface-variant">
+                    <span class="material-symbols-outlined" style="font-size:60px">inventory_2</span>
+                    <p class="mt-3">Chưa có sản phẩm nào. <a href="/Product/add" class="text-primary hover:underline">Thêm sản phẩm đầu tiên</a></p>
+                </td></tr>`;
+            info.textContent = 'Không có sản phẩm nào';
+            return;
+        }
+
+        tbody.innerHTML = products.map(p => `
+            <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low transition">
+                <td class="p-4"><input type="checkbox" class="accent-primary rounded"></td>
+                <td class="p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-lg bg-surface-container-low overflow-hidden flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-on-surface-variant text-base">image</span>
+                        </div>
+                        <div>
+                            <div class="font-semibold line-clamp-1 max-w-xs">${esc(p.name)}</div>
+                            <div class="text-on-surface-variant text-xs font-mono">${padId(p.id)}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="p-4">
+                    <span class="bg-primary-container/30 text-primary px-2 py-1 rounded text-xs font-semibold tracking-widest uppercase">
+                        ${esc(p.category_name || 'OTHER')}
+                    </span>
+                </td>
+                <td class="p-4 font-medium">${formatPrice(p.price)}</td>
+                <td class="p-4">
+                    <div class="flex items-center gap-2 text-secondary-container text-xs font-medium">
+                        <div class="w-2 h-2 rounded-full bg-secondary-container"></div>
+                        <span>Active</span>
+                    </div>
+                </td>
+                <td class="p-4 pr-6">
+                    <div class="flex items-center gap-1 justify-end">
+                        <a href="/Shop/detail/${p.id}" target="_blank"
+                           class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition text-on-surface-variant hover:text-primary"
+                           title="Xem">
+                            <span class="material-symbols-outlined text-base">visibility</span>
+                        </a>
+                        <a href="/Product/edit/${p.id}"
+                           class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center transition text-on-surface-variant hover:text-primary"
+                           title="Sửa">
+                            <span class="material-symbols-outlined text-base">edit</span>
+                        </a>
+                        <button onclick="deleteProduct(${p.id})"
+                                class="w-8 h-8 rounded-lg hover:bg-error-container/30 flex items-center justify-center transition text-on-surface-variant hover:text-error"
+                                title="Xóa">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>`).join('');
+
+        info.textContent = `Showing 1–${products.length} of ${products.length} products`;
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-error">Lỗi tải dữ liệu: ${esc(err.message)}</td></tr>`;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
 
 <?php include 'app/views/layouts/admin_footer.php'; ?>
