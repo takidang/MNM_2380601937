@@ -90,6 +90,10 @@ tailwind.config = {
             <span class="material-symbols-outlined text-base">group</span>
             <span>Users</span>
         </a>
+        <a href="/Coupon/list" class="flex items-center gap-3 px-6 py-3 hover:bg-surface-container transition <?= $activeMenu==='coupons' ? 'sidebar-link-active' : 'text-on-surface' ?>">
+            <span class="material-symbols-outlined text-base">local_offer</span>
+            <span>Coupons</span>
+        </a>
         <a href="#" class="flex items-center gap-3 px-6 py-3 hover:bg-surface-container transition <?= $activeMenu==='analytics' ? 'sidebar-link-active' : 'text-on-surface' ?>">
             <span class="material-symbols-outlined text-base">bar_chart</span>
             <span>Analytics</span>

@@ -2,11 +2,15 @@
 require_once 'app/config/database.php';
 require_once 'app/models/ProductModel.php';
 require_once 'app/models/CategoryModel.php';
+require_once 'app/models/ProductVariantModel.php';
+require_once 'app/models/ProductImageModel.php';
 
 class ShopController
 {
     private $productModel;
     private $categoryModel;
+    private $variantModel;
+    private $imageModel;
 
     public function __construct()
     {
@@ -14,6 +18,8 @@ class ShopController
         $db = $database->getConnection();
         $this->productModel  = new ProductModel($db);
         $this->categoryModel = new CategoryModel($db);
+        $this->variantModel  = new ProductVariantModel($db);
+        $this->imageModel    = new ProductImageModel($db);
     }
 
     // Hiển thị tất cả sản phẩm
@@ -48,7 +54,9 @@ class ShopController
             header('Location: /');
             exit();
         }
-        // Lấy sản phẩm liên quan cùng danh mục
+        $variants       = $this->variantModel->getByProductId($id);
+        $productImages  = $this->imageModel->getByProductId($id);
+
         $relatedProducts = [];
         if ($product->getCategory()) {
             $allRelated = $this->productModel->getProductsByCategory($product->getCategory());

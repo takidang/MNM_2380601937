@@ -1,48 +1,51 @@
 <?php
-/**
- * MailHelper
- * ----------
- * Gửi email đơn giản. Trên hosting thật sẽ dùng hàm mail() của PHP.
- * Để TIỆN KIỂM THỬ ở local (Laragon thường không gửi được mail thật),
- * mọi email cũng được lưu thành file HTML trong thư mục storage/mails/
- * để bạn mở ra và bấm vào link xác thực / đặt lại mật khẩu.
- */
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require_once 'app/helpers/phpmailer/Exception.php';
+require_once 'app/helpers/phpmailer/PHPMailer.php';
+require_once 'app/helpers/phpmailer/SMTP.php';
+
 class MailHelper
 {
-    /** Bật ở môi trường dev: trả link trực tiếp cho người dùng xem trên màn hình. */
-    const DEV_MODE = true;
+    const DEV_MODE   = false;
+    const FROM_EMAIL = 'taidang87555@gmail.com';
+    const FROM_NAME  = 'TECH-SPECTRUM';
+    const STORAGE    = 'storage/mails/';
 
-    const FROM = 'no-reply@techspectrum.test';
-    const STORAGE = 'storage/mails/';
-
-    /**
-     * @return bool Đã cố gửi (qua mail() hoặc lưu file) thành công hay không.
-     */
     public static function send($to, $subject, $htmlBody)
     {
-        // 1) Cố gửi mail thật (có thể không hoạt động ở local)
-        $sent = false;
-        $headers  = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $headers .= "From: " . self::FROM . "\r\n";
-        if (function_exists('mail')) {
-            $sent = @mail($to, $subject, $htmlBody, $headers);
-        }
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'taidang87555@gmail.com';
+            $mail->Password   = 'mssjcrgfcokjkajp';
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = 587;
+            $mail->CharSet    = 'UTF-8';
 
-        // 2) Luôn lưu một bản ra file để kiểm thử
-        if (!is_dir(self::STORAGE)) {
-            @mkdir(self::STORAGE, 0755, true);
-        }
-        $file = self::STORAGE . date('Ymd_His') . '_' . preg_replace('/[^a-z0-9]/i', '_', $to) . '.html';
-        @file_put_contents(
-            $file,
-            "<!-- To: {$to} | Subject: {$subject} | sent_via_mail(): " . ($sent ? 'yes' : 'no') . " -->\n" . $htmlBody
-        );
+            $mail->setFrom(self::FROM_EMAIL, self::FROM_NAME);
+            $mail->addAddress($to);
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body    = $htmlBody;
 
-        return $sent || file_exists($file);
+            $mail->send();
+            return true;
+        } catch (Exception $e) {
+            // Lưu file để debug nếu gửi thất bại
+            if (!is_dir(self::STORAGE)) {
+                @mkdir(self::STORAGE, 0755, true);
+            }
+            $file = self::STORAGE . date('Ymd_His') . '_failed_' . preg_replace('/[^a-z0-9]/i', '_', $to) . '.html';
+            @file_put_contents($file, "<!-- ERROR: {$mail->ErrorInfo} -->\n" . $htmlBody);
+            return false;
+        }
     }
 
-    /** Tạo URL tuyệt đối dựa trên domain hiện tại. */
     public static function baseUrl()
     {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

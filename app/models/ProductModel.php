@@ -25,13 +25,12 @@ class ProductModel
     public function getDescription() { return $this->description; }
     public function getPrice() { return $this->price; }
     public function getImage() { return $this->image; }
-    public function getCategory() { return $this->category_id; } // Trả về ID danh mục
-    public function getCategoryName() { return $this->category_name; } // Trả về tên danh mục hiển thị
+    public function getCategory() { return $this->category_id; }
+    public function getCategoryName() { return $this->category_name; }
 
     public function setName($name) { $this->name = $name; }
     public function setDescription($description) { $this->description = $description; }
     public function setPrice($price) { $this->price = $price; }
-    public function setImage($image) { $this->image = $image; }
     public function setCategory($category_id) { $this->category_id = $category_id; }
 
     // --- CÁC HÀM XỬ LÝ DATABASE ---
@@ -39,7 +38,7 @@ class ProductModel
     // 1. Lấy toàn bộ danh sách sản phẩm (kèm tên danh mục)
     public function getProducts()
     {
-        $query = "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name as category_name 
+        $query = "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name as category_name
                   FROM " . $this->table_name . " p
                   LEFT JOIN category c ON p.category_id = c.id
                   ORDER BY p.id DESC";
@@ -66,8 +65,8 @@ class ProductModel
     // 2. Lấy thông tin chi tiết một sản phẩm theo ID
     public function getProductById($id)
     {
-        $query = "SELECT id, name, description, price, image, category_id 
-                  FROM " . $this->table_name . " 
+        $query = "SELECT id, name, description, price, image, category_id
+                  FROM " . $this->table_name . "
                   WHERE id = :id LIMIT 0,1";
 
         $stmt = $this->conn->prepare($query);
@@ -87,38 +86,51 @@ class ProductModel
         return null;
     }
 
-    // 3. Thêm sản phẩm mới
-    public function addProduct($name, $description, $price, $image, $category_id)
+    // 3. Thêm sản phẩm mới — trả về mảng $errors nếu validate thất bại, hoặc int (lastInsertId) nếu thành công
+    public function addProduct($name, $description, $price, $category_id)
     {
-        $query = "INSERT INTO " . $this->table_name . " 
-                  (name, description, price, image, category_id) 
-                  VALUES (:name, :description, :price, :image, :category_id)";
+        $errors = [];
+        if (empty(trim((string)$name)))        $errors[] = 'Tên sản phẩm không được để trống';
+        if (empty(trim((string)$description))) $errors[] = 'Mô tả không được để trống';
+        if (!is_numeric($price) || (float)$price <= 0) $errors[] = 'Giá phải là số dương';
+        if (empty($category_id))               $errors[] = 'Danh mục không được để trống';
+        if (!empty($errors)) return $errors;
+
+        $query = "INSERT INTO " . $this->table_name . "
+                  (name, description, price, category_id)
+                  VALUES (:name, :description, :price, :category_id)";
 
         $stmt = $this->conn->prepare($query);
-
         $stmt->bindParam(':name', $name);
         $stmt->bindParam(':description', $description);
         $stmt->bindParam(':price', $price);
-        $stmt->bindParam(':image', $image);
         $stmt->bindParam(':category_id', $category_id);
 
-        return $stmt->execute();
+        if ($stmt->execute()) {
+            return (int)$this->conn->lastInsertId();
+        }
+        return ['Lỗi khi thêm sản phẩm vào database'];
     }
 
-    // 4. Cập nhật thông tin sản phẩm
-    public function updateProduct($id, $name, $description, $price, $image, $category_id)
+    // 4. Cập nhật thông tin sản phẩm — trả về mảng $errors nếu validate thất bại, hoặc true nếu thành công
+    public function updateProduct($id, $name, $description, $price, $category_id)
     {
-        $query = "UPDATE " . $this->table_name . " 
-                  SET name = :name, description = :description, price = :price, image = :image, category_id = :category_id 
+        $errors = [];
+        if (empty(trim((string)$name)))        $errors[] = 'Tên sản phẩm không được để trống';
+        if (empty(trim((string)$description))) $errors[] = 'Mô tả không được để trống';
+        if (!is_numeric($price) || (float)$price <= 0) $errors[] = 'Giá phải là số dương';
+        if (empty($category_id))               $errors[] = 'Danh mục không được để trống';
+        if (!empty($errors)) return $errors;
+
+        $query = "UPDATE " . $this->table_name . "
+                  SET name = :name, description = :description, price = :price, category_id = :category_id
                   WHERE id = :id";
 
         $stmt = $this->conn->prepare($query);
-
         $stmt->bindParam(':id', $id);
         $stmt->bindParam(':name', $name);
         $stmt->bindParam(':description', $description);
         $stmt->bindParam(':price', $price);
-        $stmt->bindParam(':image', $image);
         $stmt->bindParam(':category_id', $category_id);
 
         return $stmt->execute();
@@ -136,7 +148,7 @@ class ProductModel
     // 6. Lấy danh sách sản phẩm theo danh mục
     public function getProductsByCategory($category_id)
     {
-        $query = "SELECT p.*, c.name AS category_name
+        $query = "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
                   FROM " . $this->table_name . " p
                   LEFT JOIN category c ON p.category_id = c.id
                   WHERE p.category_id = :category_id

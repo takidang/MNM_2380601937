@@ -2,9 +2,8 @@
 $pageTitle  = 'Thanh toán | TECH-SPECTRUM';
 $activeMenu = '';
 include 'app/views/layouts/customer_header.php';
-$shipping = 0; // Miễn phí cho demo
-$discount = 0;
-$total = $subtotal + $shipping - $discount;
+$shipping = 0;
+$total    = max(0, $subtotal - $discount);
 ?>
 
 <!-- BREADCRUMB -->
@@ -157,6 +156,15 @@ $total = $subtotal + $shipping - $discount;
                     <span>Phí vận chuyển</span>
                     <span class="text-secondary-container">Miễn phí</span>
                 </div>
+                <?php if ($discount > 0 && $coupon): ?>
+                <div class="flex justify-between text-secondary-container">
+                    <span class="flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">local_offer</span>
+                        Mã <?= htmlspecialchars($coupon['code']) ?> (-<?= $coupon['percent'] ?>%)
+                    </span>
+                    <span>-<?= number_format($discount, 0, ',', '.') ?>đ</span>
+                </div>
+                <?php endif; ?>
             </div>
 
             <div class="flex justify-between items-baseline mt-4 pt-4 border-t border-outline-variant/20">

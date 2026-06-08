@@ -1,14 +1,18 @@
 <?php
 require_once 'app/config/database.php';
 require_once 'app/models/ProductModel.php';
+require_once 'app/models/ProductVariantModel.php';
 require_once 'app/models/OrderModel.php';
 require_once 'app/models/OrderDetailModel.php';
+require_once 'app/models/CouponModel.php';
 
 class CartController
 {
     private $productModel;
+    private $variantModel;
     private $orderModel;
     private $orderDetailModel;
+    private $couponModel;
 
     public function __construct()
     {
@@ -18,30 +22,19 @@ class CartController
         $database = new Database();
         $db = $database->getConnection();
         $this->productModel     = new ProductModel($db);
+        $this->variantModel     = new ProductVariantModel($db);
         $this->orderModel       = new OrderModel($db);
         $this->orderDetailModel = new OrderDetailModel($db);
+        $this->couponModel      = new CouponModel($db);
     }
 
     // ====== HIỂN THỊ GIỎ HÀNG ======
     public function list()
     {
-        $cartItems = [];
-        $subtotal = 0;
-
-        foreach ($_SESSION['cart'] as $productId => $item) {
-            $product = $this->productModel->getProductById($productId);
-            if (!$product) {
-                unset($_SESSION['cart'][$productId]);
-                continue;
-            }
-            $cartItems[] = [
-                'product'  => $product,
-                'quantity' => $item['quantity'],
-                'subtotal' => $product->getPrice() * $item['quantity']
-            ];
-            $subtotal += $product->getPrice() * $item['quantity'];
-        }
-
+        $cartItems = $this->buildCartItems();
+        $subtotal  = array_sum(array_column($cartItems, 'subtotal'));
+        $coupon    = $_SESSION['coupon'] ?? null;
+        $discount  = $coupon ? $coupon['discount'] : 0;
         include 'app/views/cart/list.php';
     }
 
@@ -49,17 +42,33 @@ class CartController
     public function add($productId)
     {
         $product = $this->productModel->getProductById($productId);
-        if (!$product) {
-            header('Location: /');
-            exit();
+        if (!$product) { header('Location: /'); exit(); }
+
+        $qty         = max(1, (int)($_POST['quantity'] ?? 1));
+        $variantId   = (int)($_POST['variant_id'] ?? 0) ?: null;
+        $variantName = trim($_POST['variant_name'] ?? '');
+        $price       = $product->getPrice();
+
+        if ($variantId) {
+            $variant = $this->variantModel->getById($variantId);
+            if ($variant && $variant->product_id == $productId) {
+                $price       = $variant->price;
+                $variantName = $variant->name;
+            } else {
+                $variantId   = null;
+                $variantName = '';
+            }
         }
-        $qty = (int)($_POST['quantity'] ?? 1);
-        if ($qty < 1) $qty = 1;
 
         if (isset($_SESSION['cart'][$productId])) {
             $_SESSION['cart'][$productId]['quantity'] += $qty;
         } else {
-            $_SESSION['cart'][$productId] = ['quantity' => $qty];
+            $_SESSION['cart'][$productId] = [
+                'quantity'     => $qty,
+                'variant_id'   => $variantId,
+                'variant_name' => $variantName,
+                'price'        => $price,
+            ];
         }
 
         $back = $_SERVER['HTTP_REFERER'] ?? '/';
@@ -67,21 +76,36 @@ class CartController
         exit();
     }
 
-    // ====== MUA NGAY (giống add nhưng redirect thẳng đến checkout) ======
+    // ====== MUA NGAY ======
     public function buyNow($productId)
     {
         $product = $this->productModel->getProductById($productId);
-        if (!$product) {
-            header('Location: /');
-            exit();
+        if (!$product) { header('Location: /'); exit(); }
+
+        $qty         = max(1, (int)($_POST['quantity'] ?? 1));
+        $variantId   = (int)($_POST['variant_id'] ?? 0) ?: null;
+        $variantName = '';
+        $price       = $product->getPrice();
+
+        if ($variantId) {
+            $variant = $this->variantModel->getById($variantId);
+            if ($variant && $variant->product_id == $productId) {
+                $price       = $variant->price;
+                $variantName = $variant->name;
+            } else {
+                $variantId = null;
+            }
         }
-        $qty = (int)($_POST['quantity'] ?? 1);
-        if ($qty < 1) $qty = 1;
 
         if (isset($_SESSION['cart'][$productId])) {
             $_SESSION['cart'][$productId]['quantity'] += $qty;
         } else {
-            $_SESSION['cart'][$productId] = ['quantity' => $qty];
+            $_SESSION['cart'][$productId] = [
+                'quantity'     => $qty,
+                'variant_id'   => $variantId,
+                'variant_name' => $variantName,
+                'price'        => $price,
+            ];
         }
 
         header('Location: /Cart/checkout');
@@ -117,6 +141,49 @@ class CartController
         exit();
     }
 
+    // ====== ÁP DỤNG MÃ GIẢM GIÁ (AJAX) ======
+    public function applyCoupon()
+    {
+        header('Content-Type: application/json');
+        $code     = strtoupper(trim($_POST['code'] ?? ''));
+        $subtotal = (float)($_POST['subtotal'] ?? 0);
+
+        if (!$code) {
+            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập mã giảm giá.']);
+            exit();
+        }
+
+        $coupon = $this->couponModel->getByCode($code);
+        if (!$coupon || !$this->couponModel->validate($coupon)) {
+            echo json_encode(['success' => false, 'message' => 'Mã giảm giá không hợp lệ hoặc đã hết hạn.']);
+            exit();
+        }
+
+        $discount = $this->couponModel->calculateDiscount($coupon, $subtotal);
+        $_SESSION['coupon'] = [
+            'id'       => $coupon->id,
+            'code'     => $coupon->code,
+            'percent'  => $coupon->discount_value,
+            'discount' => $discount,
+        ];
+
+        echo json_encode([
+            'success'  => true,
+            'message'  => 'Áp dụng thành công! Giảm ' . $coupon->discount_value . '%',
+            'discount' => $discount,
+            'code'     => $coupon->code,
+        ]);
+        exit();
+    }
+
+    // ====== XÓA MÃ GIẢM GIÁ ======
+    public function removeCoupon()
+    {
+        unset($_SESSION['coupon']);
+        header('Location: /Cart/list');
+        exit();
+    }
+
     // ====== TRANG THANH TOÁN ======
     public function checkout()
     {
@@ -126,27 +193,16 @@ class CartController
         }
 
         $errors    = [];
-        $cartItems = [];
-        $subtotal  = 0;
-
-        foreach ($_SESSION['cart'] as $productId => $item) {
-            $product = $this->productModel->getProductById($productId);
-            if (!$product) {
-                unset($_SESSION['cart'][$productId]);
-                continue;
-            }
-            $cartItems[] = [
-                'product'  => $product,
-                'quantity' => $item['quantity'],
-                'subtotal' => $product->getPrice() * $item['quantity']
-            ];
-            $subtotal += $product->getPrice() * $item['quantity'];
-        }
+        $cartItems = $this->buildCartItems();
 
         if (empty($cartItems)) {
             header('Location: /Cart/list');
             exit();
         }
+
+        $subtotal = array_sum(array_column($cartItems, 'subtotal'));
+        $coupon   = $_SESSION['coupon'] ?? null;
+        $discount = $coupon ? $coupon['discount'] : 0;
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name    = trim($_POST['customer_name']    ?? '');
@@ -164,21 +220,27 @@ class CartController
             if (empty($address)) $errors[] = 'Vui lòng nhập địa chỉ giao hàng.';
 
             if (empty($errors)) {
-                // Tạo items dạng phù hợp với OrderModel::addOrder
                 $items = [];
                 foreach ($cartItems as $ci) {
                     $items[] = [
-                        'product_id' => $ci['product']->getID(),
-                        'quantity'   => $ci['quantity'],
-                        'price'      => $ci['product']->getPrice()
+                        'product_id'   => $ci['product']->getID(),
+                        'quantity'     => $ci['quantity'],
+                        'price'        => $ci['price'],
+                        'variant_name' => $ci['variant_name'],
                     ];
                 }
 
-                $orderId = $this->orderModel->addOrder($name, $phone, $email, $address, $note, $items);
+                $couponCode = $coupon ? $coupon['code'] : '';
+                $orderId = $this->orderModel->addOrder(
+                    $name, $phone, $email, $address, $note, $items, $couponCode, $discount
+                );
 
                 if ($orderId) {
-                    // Đặt hàng thành công → clear giỏ
-                    $_SESSION['cart'] = [];
+                    if ($coupon) {
+                        $this->couponModel->incrementUsage($coupon['id']);
+                    }
+                    $_SESSION['cart']   = [];
+                    unset($_SESSION['coupon']);
                     $_SESSION['last_order_id'] = $orderId;
                     header('Location: /Cart/success/' . $orderId);
                     exit();
@@ -201,5 +263,29 @@ class CartController
         }
         $details = $this->orderDetailModel->getDetailsByOrderId($orderId);
         include 'app/views/cart/success.php';
+    }
+
+    // ====== HELPER ======
+    private function buildCartItems()
+    {
+        $items = [];
+        foreach ($_SESSION['cart'] as $productId => $item) {
+            $product = $this->productModel->getProductById($productId);
+            if (!$product) {
+                unset($_SESSION['cart'][$productId]);
+                continue;
+            }
+            $price       = $item['price'] ?? $product->getPrice();
+            $variantName = $item['variant_name'] ?? '';
+            $qty         = $item['quantity'];
+            $items[] = [
+                'product'      => $product,
+                'quantity'     => $qty,
+                'price'        => $price,
+                'variant_name' => $variantName,
+                'subtotal'     => $price * $qty,
+            ];
+        }
+        return $items;
     }
 }

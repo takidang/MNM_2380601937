@@ -24,6 +24,41 @@ $url = $_GET['url'] ?? '';
 $url = rtrim($url, '/');
 $url = filter_var($url, FILTER_SANITIZE_URL);
 $url = explode('/', $url);
+
+// ===== API ROUTING =====
+if (isset($url[0]) && $url[0] === 'api') {
+    require_once 'app/config/database.php';
+    $db       = (new Database())->getConnection();
+    $resource = $url[1] ?? '';
+    $id       = $url[2] ?? null;
+    $method   = $_SERVER['REQUEST_METHOD'];
+
+    $apiControllerName = ucfirst($resource) . 'ApiController';
+    $apiControllerFile = 'app/controllers/' . $apiControllerName . '.php';
+
+    if (!$resource || !file_exists($apiControllerFile)) {
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Resource not found']);
+        exit;
+    }
+
+    require_once $apiControllerFile;
+    $controller = new $apiControllerName($db);
+
+    switch ($method) {
+        case 'GET':    $id ? $controller->show($id) : $controller->index(); break;
+        case 'POST':   $controller->store();      break;
+        case 'PUT':    $controller->update($id);  break;
+        case 'DELETE': $controller->destroy($id); break;
+        default:
+            http_response_code(405);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Method not allowed']);
+    }
+    exit;
+}
+
 // Kiểm tra phần đầu tiên của URL để xác định controller
 $controllerName = isset($url[0]) && $url[0] != '' ? ucfirst($url[0]) . 'Controller' :
 'DefaultController';

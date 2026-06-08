@@ -20,17 +20,13 @@ include 'app/views/layouts/admin_header.php';
     </a>
 </div>
 
-<?php if (!empty($errors)): ?>
-    <div class="bg-error-container/20 border border-error/40 text-error rounded-lg p-4 mb-6 text-sm">
-        <ul class="list-disc list-inside space-y-1">
-            <?php foreach ($errors as $err): ?>
-                <li><?= htmlspecialchars($err) ?></li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-<?php endif; ?>
+<script>const productId = <?= (int)$product->getID() ?>;</script>
 
-<form action="/Product/edit/<?= $product->getID() ?>" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
+<div id="errorBox" class="bg-error-container/20 border border-error/40 text-error rounded-lg p-4 mb-6 text-sm hidden">
+    <ul id="errorList" class="list-disc list-inside space-y-1"></ul>
+</div>
+
+<form id="editForm" class="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
 
     <!-- LEFT: BASIC INFO -->
     <div class="space-y-6">
@@ -43,75 +39,37 @@ include 'app/views/layouts/admin_header.php';
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">Tên sản phẩm <span class="text-error">*</span></label>
-                    <input type="text" name="name" required
-                           value="<?= htmlspecialchars($product->getName()) ?>"
+                    <input type="text" id="name" required
                            class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Giá bán (đ) <span class="text-error">*</span></label>
-                        <input type="number" name="price" required min="1" step="1000"
-                               value="<?= htmlspecialchars($product->getPrice()) ?>"
+                        <input type="number" id="price" required min="1" step="1"
                                class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm font-mono">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Danh mục <span class="text-error">*</span></label>
-                        <select name="category_id" required class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm">
-                            <option value="">-- Chọn danh mục --</option>
-                            <?php
-                            $currentCat = $product->getCategory();
-                            foreach ($categories as $cat): ?>
-                                <option value="<?= htmlspecialchars($cat->id) ?>"
-                                    <?= ((string)$currentCat === (string)$cat->id) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($cat->name) ?>
-                                </option>
-                            <?php endforeach; ?>
+                        <select id="category_id" required class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm">
+                            <option value="">-- Đang tải... --</option>
                         </select>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium mb-2">Mô tả sản phẩm</label>
-                    <textarea name="description" rows="5"
-                              class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm resize-none"><?= htmlspecialchars($product->getDescription() ?? '') ?></textarea>
+                    <label class="block text-sm font-medium mb-2">Mô tả sản phẩm <span class="text-error">*</span></label>
+                    <textarea id="description" rows="5" required
+                              class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 focus:border-primary focus:outline-none transition text-sm resize-none"></textarea>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- RIGHT: IMAGE + ACTION -->
+    <!-- RIGHT: ACTION -->
     <div class="space-y-6">
-        <div class="bg-surface-container rounded-xl border border-outline-variant/20 p-6">
-            <h2 class="text-lg font-bold mb-5 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">image</span>
-                Ảnh sản phẩm
-            </h2>
-
-            <label for="imageInput" class="block">
-                <?php if ($product->getImage()): ?>
-                    <img id="imgPreview" src="/public/images/products/<?= htmlspecialchars($product->getImage()) ?>"
-                         class="aspect-square w-full rounded-xl object-cover border border-outline-variant/30 cursor-pointer" alt="">
-                    <div id="dropZone" class="hidden aspect-square border-2 border-dashed border-outline-variant/40 hover:border-primary rounded-xl flex-col items-center justify-center cursor-pointer transition text-on-surface-variant hover:text-primary">
-                        <span class="material-symbols-outlined text-5xl mb-2">cloud_upload</span>
-                        <p class="font-medium">Nhấn để chọn ảnh</p>
-                    </div>
-                <?php else: ?>
-                    <img id="imgPreview" class="hidden aspect-square w-full rounded-xl object-cover border border-outline-variant/30" alt="">
-                    <div id="dropZone" class="aspect-square border-2 border-dashed border-outline-variant/40 hover:border-primary rounded-xl flex flex-col items-center justify-center cursor-pointer transition text-on-surface-variant hover:text-primary">
-                        <span class="material-symbols-outlined text-5xl mb-2">cloud_upload</span>
-                        <p class="font-medium">Nhấn để chọn ảnh</p>
-                        <p class="text-xs mt-1">JPG, PNG, GIF, WEBP • Tối đa 5MB</p>
-                    </div>
-                <?php endif; ?>
-            </label>
-            <input type="file" id="imageInput" name="image" accept="image/*" class="hidden">
-
-            <p class="text-on-surface-variant text-xs mt-3 text-center">Nhấn vào ảnh để thay đổi</p>
-        </div>
-
         <div class="bg-surface-container rounded-xl border border-outline-variant/20 p-6 space-y-3">
-            <button type="submit" class="w-full bg-primary-container hover:bg-primary-container/90 text-white rounded-lg py-3 font-semibold flex items-center justify-center gap-2 transition glow-btn">
+            <button type="submit" id="submitBtn" class="w-full bg-primary-container hover:bg-primary-container/90 text-white rounded-lg py-3 font-semibold flex items-center justify-center gap-2 transition glow-btn">
                 <span class="material-symbols-outlined text-base">save</span>
                 Cập nhật
             </button>
@@ -123,18 +81,63 @@ include 'app/views/layouts/admin_header.php';
 </form>
 
 <script>
-document.getElementById('imageInput').addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        document.getElementById('dropZone').classList.add('hidden');
-        const preview = document.getElementById('imgPreview');
-        preview.src = e.target.result;
-        preview.classList.remove('hidden');
+async function loadFormData() {
+    const [productRes, catRes] = await Promise.all([
+        fetch('/api/product/' + productId),
+        fetch('/api/category'),
+    ]);
+
+    if (!productRes.ok) {
+        alert('Không tìm thấy sản phẩm');
+        window.location.href = '/Product/list';
+        return;
+    }
+
+    const product    = await productRes.json();
+    const categories = await catRes.json();
+
+    document.getElementById('name').value        = product.name;
+    document.getElementById('price').value       = product.price;
+    document.getElementById('description').value = product.description;
+
+    const select = document.getElementById('category_id');
+    select.innerHTML = '<option value="">-- Chọn danh mục --</option>' +
+        categories.map(c => `<option value="${c.id}" ${c.id == product.category_id ? 'selected' : ''}>${c.name}</option>`).join('');
+}
+
+document.getElementById('editForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+
+    const payload = {
+        name:        document.getElementById('name').value,
+        description: document.getElementById('description').value,
+        price:       document.getElementById('price').value,
+        category_id: document.getElementById('category_id').value,
     };
-    reader.readAsDataURL(file);
+
+    const res  = await fetch('/api/product/' + productId, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+        window.location.href = '/Product/list';
+        return;
+    }
+
+    const box  = document.getElementById('errorBox');
+    const list = document.getElementById('errorList');
+    const errs = data.errors ?? [data.error ?? 'Lỗi không xác định'];
+    list.innerHTML = errs.map(e => `<li>${e}</li>`).join('');
+    box.classList.remove('hidden');
+    btn.disabled = false;
 });
+
+document.addEventListener('DOMContentLoaded', loadFormData);
 </script>
 
 <?php include 'app/views/layouts/admin_footer.php'; ?>

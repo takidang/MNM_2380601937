@@ -38,7 +38,7 @@ include 'app/views/layouts/auth_top.php';
             <div class="flex items-center bg-surface-container-low rounded-lg px-3 border border-outline-variant/30 focus-within:border-primary transition">
                 <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">mail</span>
                 <input type="email" name="email" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
-                       class="inp text-sm w-full py-3 text-on-surface" placeholder="email@example.com">
+                       class="bg-transparent border-0 outline-none text-sm w-full py-3 text-on-surface placeholder:text-on-surface-variant" placeholder="email@example.com">
             </div>
         </div>
         <button type="submit" class="bg-primary-container hover:bg-primary-container/90 text-white rounded-lg w-full py-3 flex items-center justify-center gap-2 font-medium text-sm transition glow-btn">

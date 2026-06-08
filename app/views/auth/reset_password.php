@@ -32,14 +32,14 @@ include 'app/views/layouts/auth_top.php';
             <label class="block text-sm font-medium text-on-surface-variant mb-2">Mật khẩu mới</label>
             <div class="flex items-center bg-surface-container-low rounded-lg px-3 border border-outline-variant/30 focus-within:border-primary transition">
                 <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">lock_open</span>
-                <input type="password" name="new_password" required class="inp text-sm w-full py-3 text-on-surface" placeholder="Tối thiểu 6 ký tự">
+                <input type="password" name="new_password" required class="bg-transparent border-0 outline-none text-sm w-full py-3 text-on-surface placeholder:text-on-surface-variant" placeholder="Tối thiểu 6 ký tự">
             </div>
         </div>
         <div>
             <label class="block text-sm font-medium text-on-surface-variant mb-2">Nhập lại mật khẩu mới</label>
             <div class="flex items-center bg-surface-container-low rounded-lg px-3 border border-outline-variant/30 focus-within:border-primary transition">
                 <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">lock_reset</span>
-                <input type="password" name="confirm_password" required class="inp text-sm w-full py-3 text-on-surface" placeholder="••••••••">
+                <input type="password" name="confirm_password" required class="bg-transparent border-0 outline-none text-sm w-full py-3 text-on-surface placeholder:text-on-surface-variant" placeholder="••••••••">
             </div>
         </div>
         <button type="submit" class="bg-primary-container hover:bg-primary-container/90 text-white rounded-lg w-full py-3 flex items-center justify-center gap-2 font-medium text-sm transition glow-btn">

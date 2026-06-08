@@ -117,45 +117,47 @@ class OrderModel
     }
 
     // ===== TẠO ĐƠN HÀNG MỚI (kèm chi tiết) =====
-    // $items: mảng [['product_id' => x, 'quantity' => y, 'price' => z], ...]
-    public function addOrder($customerName, $customerPhone, $customerEmail, $customerAddress, $note, $items)
+    // $items: [['product_id', 'quantity', 'price', 'variant_name'], ...]
+    public function addOrder($customerName, $customerPhone, $customerEmail, $customerAddress, $note, $items, $couponCode = '', $discount = 0)
     {
         try {
             $this->conn->beginTransaction();
 
-            // Tính tổng tiền từ items
-            $totalAmount = 0;
+            $subtotal    = 0;
             foreach ($items as $item) {
-                $totalAmount += $item['price'] * $item['quantity'];
+                $subtotal += $item['price'] * $item['quantity'];
             }
+            $totalAmount = max(0, $subtotal - $discount);
 
-            // 1. Insert vào bảng order
             $query = "INSERT INTO " . $this->table . "
-                      (customer_name, customer_phone, customer_email, customer_address, total_amount, note)
-                      VALUES (:name, :phone, :email, :address, :total, :note)";
+                      (customer_name, customer_phone, customer_email, customer_address, total_amount, coupon_code, discount_amount, note)
+                      VALUES (:name, :phone, :email, :address, :total, :coupon, :discount, :note)";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':name',    $customerName);
-            $stmt->bindParam(':phone',   $customerPhone);
-            $stmt->bindParam(':email',   $customerEmail);
-            $stmt->bindParam(':address', $customerAddress);
-            $stmt->bindParam(':total',   $totalAmount);
-            $stmt->bindParam(':note',    $note);
+            $stmt->bindParam(':name',     $customerName);
+            $stmt->bindParam(':phone',    $customerPhone);
+            $stmt->bindParam(':email',    $customerEmail);
+            $stmt->bindParam(':address',  $customerAddress);
+            $stmt->bindParam(':total',    $totalAmount);
+            $stmt->bindParam(':coupon',   $couponCode);
+            $stmt->bindParam(':discount', $discount);
+            $stmt->bindParam(':note',     $note);
             $stmt->execute();
 
             $orderId = $this->conn->lastInsertId();
 
-            // 2. Insert chi tiết đơn hàng
-            $detailQuery = "INSERT INTO order_detail (order_id, product_id, quantity, price, subtotal)
-                            VALUES (:order_id, :product_id, :quantity, :price, :subtotal)";
+            $detailQuery = "INSERT INTO order_detail (order_id, product_id, variant_name, quantity, price, subtotal)
+                            VALUES (:order_id, :product_id, :variant_name, :quantity, :price, :subtotal)";
             $detailStmt = $this->conn->prepare($detailQuery);
 
             foreach ($items as $item) {
-                $subtotal = $item['price'] * $item['quantity'];
-                $detailStmt->bindValue(':order_id',   $orderId,             PDO::PARAM_INT);
-                $detailStmt->bindValue(':product_id', $item['product_id'],  PDO::PARAM_INT);
-                $detailStmt->bindValue(':quantity',   $item['quantity'],    PDO::PARAM_INT);
-                $detailStmt->bindValue(':price',      $item['price']);
-                $detailStmt->bindValue(':subtotal',   $subtotal);
+                $subtotalRow  = $item['price'] * $item['quantity'];
+                $variantName  = $item['variant_name'] ?? null;
+                $detailStmt->bindValue(':order_id',     $orderId,            PDO::PARAM_INT);
+                $detailStmt->bindValue(':product_id',   $item['product_id'], PDO::PARAM_INT);
+                $detailStmt->bindValue(':variant_name', $variantName);
+                $detailStmt->bindValue(':quantity',     $item['quantity'],   PDO::PARAM_INT);
+                $detailStmt->bindValue(':price',        $item['price']);
+                $detailStmt->bindValue(':subtotal',     $subtotalRow);
                 $detailStmt->execute();
             }
 
