@@ -77,16 +77,7 @@ class OrderModel
         $orders = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $order = new OrderModel($this->conn);
-            $order->id               = $row['id'];
-            $order->customer_name    = $row['customer_name'];
-            $order->customer_phone   = $row['customer_phone'];
-            $order->customer_email   = $row['customer_email'];
-            $order->customer_address = $row['customer_address'];
-            $order->total_amount     = $row['total_amount'];
-            $order->status           = $row['status'];
-            $order->note             = $row['note'];
-            $order->created_at       = $row['created_at'];
-            $order->updated_at       = $row['updated_at'];
+            foreach ($row as $k => $v) $order->$k = $v;
             $orders[] = $order;
         }
         return $orders;
@@ -103,22 +94,29 @@ class OrderModel
         if (!$row) return null;
 
         $order = new OrderModel($this->conn);
-        $order->id               = $row['id'];
-        $order->customer_name    = $row['customer_name'];
-        $order->customer_phone   = $row['customer_phone'];
-        $order->customer_email   = $row['customer_email'];
-        $order->customer_address = $row['customer_address'];
-        $order->total_amount     = $row['total_amount'];
-        $order->status           = $row['status'];
-        $order->note             = $row['note'];
-        $order->created_at       = $row['created_at'];
-        $order->updated_at       = $row['updated_at'];
+        foreach ($row as $k => $v) $order->$k = $v;
         return $order;
+    }
+
+    // ===== LẤY ĐƠN HÀNG THEO USER =====
+    public function getOrdersByUserId($userId)
+    {
+        $query = "SELECT * FROM " . $this->table . " WHERE user_id = :user_id ORDER BY created_at DESC";
+        $stmt  = $this->conn->prepare($query);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        $orders = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $order = new OrderModel($this->conn);
+            foreach ($row as $k => $v) $order->$k = $v;
+            $orders[] = $order;
+        }
+        return $orders;
     }
 
     // ===== TẠO ĐƠN HÀNG MỚI (kèm chi tiết) =====
     // $items: [['product_id', 'quantity', 'price', 'variant_name'], ...]
-    public function addOrder($customerName, $customerPhone, $customerEmail, $customerAddress, $note, $items, $couponCode = '', $discount = 0)
+    public function addOrder($customerName, $customerPhone, $customerEmail, $customerAddress, $note, $items, $couponCode = '', $discount = 0, $userId = null)
     {
         try {
             $this->conn->beginTransaction();
@@ -130,9 +128,10 @@ class OrderModel
             $totalAmount = max(0, $subtotal - $discount);
 
             $query = "INSERT INTO " . $this->table . "
-                      (customer_name, customer_phone, customer_email, customer_address, total_amount, coupon_code, discount_amount, note)
-                      VALUES (:name, :phone, :email, :address, :total, :coupon, :discount, :note)";
+                      (user_id, customer_name, customer_phone, customer_email, customer_address, total_amount, coupon_code, discount_amount, note)
+                      VALUES (:user_id, :name, :phone, :email, :address, :total, :coupon, :discount, :note)";
             $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':user_id',  $userId,          PDO::PARAM_INT);
             $stmt->bindParam(':name',     $customerName);
             $stmt->bindParam(':phone',    $customerPhone);
             $stmt->bindParam(':email',    $customerEmail);

@@ -1,90 +1,83 @@
 <?php
+require_once 'app/controllers/ApiController.php';
 require_once 'app/models/CategoryModel.php';
 
-class CategoryApiController
+class CategoryApiController extends ApiController
 {
     private $categoryModel;
 
     public function __construct($db)
     {
+        parent::__construct($db);
         $this->categoryModel = new CategoryModel($db);
     }
 
     // GET /api/category
-    public function index()
+    public function index(): void
     {
-        header('Content-Type: application/json');
-        echo json_encode($this->categoryModel->getCategories());
+        $cats   = $this->categoryModel->getCategories();
+        $result = [];
+        foreach ($cats as $c) {
+            $result[] = ['id' => (int)$c->id, 'name' => $c->name, 'description' => $c->description];
+        }
+        $this->json($result);
     }
 
     // GET /api/category/{id}
-    public function show($id)
+    public function show($id): void
     {
-        header('Content-Type: application/json');
         $cat = $this->categoryModel->getCategoryById($id);
-        if (!$cat) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Không tìm thấy danh mục']);
-            return;
-        }
-        echo json_encode($cat);
+        if (!$cat) $this->json(['error' => 'Không tìm thấy danh mục'], 404);
+        $this->json(['id' => (int)$cat->id, 'name' => $cat->name, 'description' => $cat->description]);
     }
 
-    // POST /api/category
-    public function store()
+    // POST /api/category — Admin only
+    public function store(): void
     {
-        header('Content-Type: application/json');
-        $data = json_decode(file_get_contents('php://input'), true);
-
-        $name        = trim($data['name'] ?? '');
+        $this->requireAdmin();
+        $data        = $this->getBody();
+        $name        = trim($data['name']        ?? '');
         $description = trim($data['description'] ?? '');
 
-        if (empty($name)) {
-            http_response_code(400);
-            echo json_encode(['errors' => ['Tên danh mục không được để trống']]);
-            return;
-        }
+        if (!$name) $this->json(['errors' => ['Tên danh mục không được để trống']], 400);
 
         $this->categoryModel->addCategory($name, $description);
-        http_response_code(201);
-        echo json_encode(['message' => 'Tạo danh mục thành công']);
+        $this->json(['message' => 'Tạo danh mục thành công'], 201);
     }
 
-    // PUT /api/category/{id}
-    public function update($id)
+    // PUT /api/category/{id} — Admin only
+    public function update($id): void
     {
-        header('Content-Type: application/json');
-        if (!$this->categoryModel->getCategoryById($id)) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Không tìm thấy danh mục']);
-            return;
-        }
+        $this->requireAdmin();
+        $cat = $this->categoryModel->getCategoryById($id);
+        if (!$cat) $this->json(['error' => 'Không tìm thấy danh mục'], 404);
 
-        $data = json_decode(file_get_contents('php://input'), true);
-        $name        = trim($data['name'] ?? '');
-        $description = trim($data['description'] ?? '');
+        $data        = $this->getBody();
+        $name        = trim($data['name']        ?? $cat->name);
+        $description = trim($data['description'] ?? $cat->description);
 
-        if (empty($name)) {
-            http_response_code(400);
-            echo json_encode(['errors' => ['Tên danh mục không được để trống']]);
-            return;
-        }
+        if (!$name) $this->json(['errors' => ['Tên danh mục không được để trống']], 400);
 
         $this->categoryModel->updateCategory($id, $name, $description);
-        echo json_encode(['message' => 'Cập nhật danh mục thành công']);
+        $this->json(['message' => 'Cập nhật danh mục thành công']);
     }
 
-    // DELETE /api/category/{id}
-    public function destroy($id)
+    // DELETE /api/category/{id} — Admin only
+    public function destroy($id): void
     {
-        header('Content-Type: application/json');
-        if (!$this->categoryModel->getCategoryById($id)) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Không tìm thấy danh mục']);
-            return;
+        $this->requireAdmin();
+        $cat = $this->categoryModel->getCategoryById($id);
+        if (!$cat) $this->json(['error' => 'Không tìm thấy danh mục'], 404);
+
+        // Không cho xóa nếu còn sản phẩm thuộc danh mục này
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM product WHERE category_id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        if ((int)$stmt->fetchColumn() > 0) {
+            $this->json(['error' => 'Không thể xóa danh mục vì vẫn còn sản phẩm thuộc danh mục này'], 400);
         }
 
         $this->categoryModel->deleteCategory($id);
-        echo json_encode(['message' => 'Xóa danh mục thành công']);
+        $this->json(['message' => 'Xóa danh mục thành công']);
     }
 }

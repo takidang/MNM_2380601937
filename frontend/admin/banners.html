@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý Banner – Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div id="nav"></div>
+  <div class="flex">
+    <aside class="w-56 bg-gray-900 text-white min-h-screen p-4 shrink-0">
+      <h2 class="text-lg font-bold mb-6 text-blue-400">Admin Panel</h2>
+      <nav class="space-y-1 text-sm">
+        <a href="/frontend/admin/index.html"      class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">📊 Dashboard</a>
+        <a href="/frontend/admin/products.html"   class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">📦 Sản phẩm</a>
+        <a href="/frontend/admin/categories.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">📁 Danh mục</a>
+        <a href="/frontend/admin/orders.html"     class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🧾 Đơn hàng</a>
+        <a href="/frontend/admin/users.html"      class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">👥 Người dùng</a>
+        <a href="/frontend/admin/coupons.html"    class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🎫 Coupon</a>
+        <a href="/frontend/admin/banners.html"    class="flex items-center gap-2 px-3 py-2 rounded bg-blue-700">🖼 Banner</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Quản lý Banner</h1>
+        <button onclick="openModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Thêm banner</button>
+      </div>
+
+      <div id="bannerList" class="space-y-4"></div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-screen overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modalTitle" class="font-bold text-gray-800 text-lg">Thêm banner</h2>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div id="formErr" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"></div>
+
+      <form id="bannerForm" onsubmit="submitBanner(event)" class="space-y-4" enctype="multipart/form-data">
+        <input type="hidden" id="editId">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tiêu đề *</label>
+          <input id="bTitle" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Mô tả phụ</label>
+          <input id="bSubtitle" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Ảnh banner</label>
+          <input id="bImage" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 focus:outline-none">
+          <p id="currentImg" class="text-xs text-gray-400 mt-1 hidden">Ảnh hiện tại: <span id="currentImgName"></span></p>
+          <div id="imgPreview" class="mt-2 hidden">
+            <img id="previewImg" class="h-32 rounded-lg object-cover border">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nút CTA</label>
+            <input id="bBtnText" value="Xem ngay" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Link nút</label>
+            <input id="bBtnLink" value="#products" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Thứ tự</label>
+            <input id="bSort" type="number" value="0" min="0" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select id="bActive" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="1">Hiển thị</option>
+              <option value="0">Ẩn</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">Hủy</button>
+          <button type="submit" id="submitBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+  renderNav();
+  if (!Auth.requireAdmin()) {}
+
+  const BANNER_IMG = '/public/images/banners/';
+  const GRADIENTS  = [
+    'linear-gradient(135deg,#1e3a8a,#2563eb)',
+    'linear-gradient(135deg,#581c87,#be185d)',
+    'linear-gradient(135deg,#14532d,#0d9488)',
+    'linear-gradient(135deg,#7c2d12,#ea580c)',
+    'linear-gradient(135deg,#0c4a6e,#0284c7)',
+  ];
+
+  async function load() {
+    const res = await GET('/banner');
+    if (!res?.ok) return;
+    const list = document.getElementById('bannerList');
+    if (!res.data.length) {
+      list.innerHTML = '<p class="text-gray-400 text-center py-10">Chưa có banner nào.</p>';
+      return;
+    }
+    list.innerHTML = res.data.map((b, i) => `
+      <div class="bg-white rounded-xl shadow overflow-hidden flex gap-4 p-4 items-center">
+        <div class="w-48 h-24 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-white text-center text-xs font-bold"
+             style="${b.image ? '' : 'background:' + GRADIENTS[i % GRADIENTS.length]}">
+          ${b.image
+            ? `<img src="${BANNER_IMG+b.image}" class="w-full h-full object-cover" onerror="this.parentElement.style.background='${GRADIENTS[i%GRADIENTS.length]}';">`
+            : `<span class="px-2">${b.title}</span>`}
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <h3 class="font-bold text-gray-800">${b.title}</h3>
+            <span class="text-xs px-2 py-0.5 rounded-full ${b.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
+              ${b.is_active ? 'Hiển thị' : 'Ẩn'}
+            </span>
+          </div>
+          ${b.subtitle ? `<p class="text-sm text-gray-500 mb-1">${b.subtitle}</p>` : ''}
+          <p class="text-xs text-gray-400">Nút: <b>${b.button_text}</b> → ${b.button_link} | Thứ tự: ${b.sort_order}</p>
+        </div>
+        <div class="flex flex-col gap-2 shrink-0">
+          <button onclick="editBanner(${b.id})" class="text-sm text-blue-600 hover:underline">Sửa</button>
+          <button onclick="deleteBanner(${b.id},'${b.title.replace(/'/g,"\\'")}')" class="text-sm text-red-500 hover:underline">Xóa</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openModal(data = null) {
+    document.getElementById('editId').value     = data?.id || '';
+    document.getElementById('modalTitle').textContent = data ? 'Sửa banner' : 'Thêm banner';
+    document.getElementById('bTitle').value     = data?.title || '';
+    document.getElementById('bSubtitle').value  = data?.subtitle || '';
+    document.getElementById('bBtnText').value   = data?.button_text || 'Xem ngay';
+    document.getElementById('bBtnLink').value   = data?.button_link || '#products';
+    document.getElementById('bSort').value      = data?.sort_order ?? 0;
+    document.getElementById('bActive').value    = data?.is_active ?? 1;
+    document.getElementById('bImage').value     = '';
+    document.getElementById('imgPreview').classList.add('hidden');
+    document.getElementById('formErr').classList.add('hidden');
+
+    const cur = document.getElementById('currentImg');
+    const curName = document.getElementById('currentImgName');
+    if (data?.image) {
+      curName.textContent = data.image;
+      cur.classList.remove('hidden');
+    } else {
+      cur.classList.add('hidden');
+    }
+
+    document.getElementById('modal').classList.remove('hidden');
+  }
+
+  function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+  document.getElementById('bImage').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('imgPreview').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  async function editBanner(id) {
+    const res = await GET('/banner/' + id);
+    if (res?.ok) openModal(res.data);
+  }
+
+  async function submitBanner(e) {
+    e.preventDefault();
+    const id  = document.getElementById('editId').value;
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+
+    const formData = new FormData();
+    formData.append('title',       document.getElementById('bTitle').value.trim());
+    formData.append('subtitle',    document.getElementById('bSubtitle').value.trim());
+    formData.append('button_text', document.getElementById('bBtnText').value.trim());
+    formData.append('button_link', document.getElementById('bBtnLink').value.trim());
+    formData.append('sort_order',  document.getElementById('bSort').value);
+    formData.append('is_active',   document.getElementById('bActive').value);
+
+    const imgFile = document.getElementById('bImage').files[0];
+    if (imgFile) formData.append('image', imgFile);
+
+    const token  = Auth.getToken();
+    // Luôn dùng POST vì PHP chỉ populate $_FILES với POST
+    const url = id ? `/api/banner/update/${id}` : '/api/banner';
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: formData,
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const errEl = document.getElementById('formErr');
+      errEl.textContent = data?.error || 'Lỗi lưu banner';
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Lưu';
+      return;
+    }
+
+    showToast(id ? 'Cập nhật thành công' : 'Thêm banner thành công');
+    closeModal(); load();
+    btn.disabled = false; btn.textContent = 'Lưu';
+  }
+
+  async function deleteBanner(id, title) {
+    if (!confirm(`Xóa banner "${title}"?`)) return;
+    const res = await DELETE('/banner/' + id);
+    if (res?.ok) { showToast('Đã xóa banner'); load(); }
+    else showToast(res?.data?.error || 'Lỗi', 'error');
+  }
+
+  load();
+</script>
+</body>
+</html>
