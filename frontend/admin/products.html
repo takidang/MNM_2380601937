@@ -1,0 +1,205 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý sản phẩm – Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div id="nav"></div>
+  <div class="flex">
+    <aside class="w-56 bg-gray-900 text-white min-h-screen p-4 shrink-0">
+      <h2 class="text-lg font-bold mb-6 text-blue-400">Admin Panel</h2>
+      <nav class="space-y-1 text-sm">
+        <a href="/frontend/admin/index.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">📊 Dashboard</a>
+        <a href="/frontend/admin/products.html" class="flex items-center gap-2 px-3 py-2 rounded bg-blue-700">📦 Sản phẩm</a>
+        <a href="/frontend/admin/categories.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">📁 Danh mục</a>
+        <a href="/frontend/admin/orders.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🧾 Đơn hàng</a>
+        <a href="/frontend/admin/users.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">👥 Người dùng</a>
+        <a href="/frontend/admin/coupons.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🎫 Coupon</a>
+        <a href="/frontend/admin/banners.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🖼 Banner</a>
+      </nav>
+    </aside>
+    <main class="flex-1 p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Quản lý sản phẩm</h1>
+        <button onclick="openModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Thêm sản phẩm</button>
+      </div>
+
+      <!-- Bộ lọc -->
+      <div class="flex gap-3 mb-4">
+        <input id="searchQ" type="text" placeholder="Tìm theo tên..." class="border rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <select id="catFilter" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">Tất cả danh mục</option>
+        </select>
+        <button onclick="loadProducts(1)" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800">Lọc</button>
+      </div>
+
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-4 py-3 text-left">ID</th>
+              <th class="px-4 py-3 text-left">Ảnh</th>
+              <th class="px-4 py-3 text-left">Tên sản phẩm</th>
+              <th class="px-4 py-3 text-left">Danh mục</th>
+              <th class="px-4 py-3 text-right">Giá</th>
+              <th class="px-4 py-3 text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="productTable" class="divide-y"></tbody>
+        </table>
+      </div>
+      <div id="pagination" class="flex justify-center gap-2 mt-4"></div>
+    </main>
+  </div>
+
+  <!-- Modal thêm/sửa sản phẩm -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modalTitle" class="font-bold text-gray-800 text-lg">Thêm sản phẩm</h2>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div id="formErr" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"></div>
+      <form id="productForm" class="space-y-4" onsubmit="submitProduct(event)">
+        <input type="hidden" id="editId">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tên sản phẩm *</label>
+          <input id="pName" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Mô tả *</label>
+          <textarea id="pDesc" rows="3" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Giá *</label>
+            <input id="pPrice" type="number" min="0" step="1000" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Danh mục *</label>
+            <select id="pCat" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+              <option value="">-- Chọn --</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">Hủy</button>
+          <button type="submit" id="submitBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+  renderNav();
+  if (!Auth.requireAdmin()) {}
+
+  let categories = [];
+  let currentPage = 1;
+
+  async function loadCategories() {
+    const res = await GET('/category');
+    if (!res?.ok) return;
+    categories = res.data;
+    const sel1 = document.getElementById('catFilter');
+    const sel2 = document.getElementById('pCat');
+    res.data.forEach(c => {
+      sel1.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+      sel2.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+  }
+
+  async function loadProducts(page = 1) {
+    currentPage = page;
+    const q   = document.getElementById('searchQ').value.trim();
+    const cat = document.getElementById('catFilter').value;
+    const url = q
+      ? `/product/search?q=${encodeURIComponent(q)}&page=${page}&per_page=15`
+      : `/product?page=${page}&per_page=15${cat ? '&category_id='+cat : ''}`;
+
+    const res = await GET(url);
+    if (!res?.ok) return;
+    const { data, pagination } = res.data;
+
+    document.getElementById('productTable').innerHTML = data.map(p => `
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 text-gray-500">#${p.id}</td>
+        <td class="px-4 py-3"><img src="${imgUrl(p.image)}" class="w-10 h-10 object-cover rounded" onerror="this.src='/public/images/no-image.png'"></td>
+        <td class="px-4 py-3 font-medium text-gray-800">${p.name}</td>
+        <td class="px-4 py-3 text-gray-500">${p.category_name || '—'}</td>
+        <td class="px-4 py-3 text-right font-semibold">${formatVND(p.price)}</td>
+        <td class="px-4 py-3 text-center space-x-2">
+          <button onclick="editProduct(${p.id})" class="text-blue-600 hover:underline text-xs">Sửa</button>
+          <button onclick="deleteProduct(${p.id},'${p.name}')" class="text-red-500 hover:underline text-xs">Xóa</button>
+        </td>
+      </tr>`).join('');
+
+    // Pagination
+    const pages = pagination.pages || 1;
+    const pag = document.getElementById('pagination');
+    pag.innerHTML = pages > 1 ? Array.from({length:pages},(_,i)=>i+1).map(i =>
+      `<button onclick="loadProducts(${i})" class="px-3 py-1 rounded border ${i===currentPage?'bg-blue-600 text-white':'hover:bg-gray-100'}">${i}</button>`).join('') : '';
+  }
+
+  function openModal(data = null) {
+    document.getElementById('editId').value = data?.id || '';
+    document.getElementById('modalTitle').textContent = data ? 'Sửa sản phẩm' : 'Thêm sản phẩm';
+    document.getElementById('pName').value  = data?.name || '';
+    document.getElementById('pDesc').value  = data?.description || '';
+    document.getElementById('pPrice').value = data?.price || '';
+    document.getElementById('pCat').value   = data?.category_id || '';
+    document.getElementById('formErr').classList.add('hidden');
+    document.getElementById('modal').classList.remove('hidden');
+  }
+
+  function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+  async function editProduct(id) {
+    const res = await GET('/product/' + id);
+    if (res?.ok) openModal(res.data);
+  }
+
+  async function submitProduct(e) {
+    e.preventDefault();
+    const id  = document.getElementById('editId').value;
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+
+    const body = {
+      name:        document.getElementById('pName').value.trim(),
+      description: document.getElementById('pDesc').value.trim(),
+      price:       parseFloat(document.getElementById('pPrice').value),
+      category_id: parseInt(document.getElementById('pCat').value),
+    };
+
+    const res = id ? await PUT('/product/'+id, body) : await POST('/product', body);
+
+    if (!res?.ok) {
+      const errors = res?.data?.errors || [res?.data?.error || 'Lỗi'];
+      showError(document.getElementById('formErr'), errors.join(', '));
+      btn.disabled = false; btn.textContent = 'Lưu';
+      return;
+    }
+
+    showToast(id ? 'Cập nhật thành công' : 'Thêm sản phẩm thành công');
+    closeModal();
+    loadProducts(currentPage);
+    btn.disabled = false; btn.textContent = 'Lưu';
+  }
+
+  async function deleteProduct(id, name) {
+    if (!confirm(`Xóa sản phẩm "${name}"?`)) return;
+    const res = await DELETE('/product/' + id);
+    if (res?.ok) { showToast('Đã xóa sản phẩm'); loadProducts(currentPage); }
+    else showToast(res?.data?.error || 'Lỗi xóa', 'error');
+  }
+
+  loadCategories();
+  loadProducts(1);
+</script>
+</body>
+</html>
+

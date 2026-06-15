@@ -7,6 +7,7 @@ class OrderDetailModel
     public $id;
     public $order_id;
     public $product_id;
+    public $variant_name;
     public $quantity;
     public $price;
     public $subtotal;
@@ -48,6 +49,7 @@ class OrderDetailModel
             $detail->id            = $row['id'];
             $detail->order_id      = $row['order_id'];
             $detail->product_id    = $row['product_id'];
+            $detail->variant_name  = $row['variant_name'] ?? null;
             $detail->quantity      = $row['quantity'];
             $detail->price         = $row['price'];
             $detail->subtotal      = $row['subtotal'];

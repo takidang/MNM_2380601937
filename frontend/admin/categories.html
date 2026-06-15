@@ -1,0 +1,130 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý danh mục – Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div id="nav"></div>
+  <div class="flex">
+    <aside class="w-56 bg-gray-900 text-white min-h-screen p-4 shrink-0">
+      <h2 class="text-lg font-bold mb-6 text-blue-400">Admin Panel</h2>
+      <nav class="space-y-1 text-sm">
+        <a href="/frontend/admin/index.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">📊 Dashboard</a>
+        <a href="/frontend/admin/products.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">📦 Sản phẩm</a>
+        <a href="/frontend/admin/categories.html" class="flex items-center gap-2 px-3 py-2 rounded bg-blue-700">📁 Danh mục</a>
+        <a href="/frontend/admin/orders.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🧾 Đơn hàng</a>
+        <a href="/frontend/admin/users.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">👥 Người dùng</a>
+        <a href="/frontend/admin/coupons.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🎫 Coupon</a>
+        <a href="/frontend/admin/banners.html" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-700">🖼 Banner</a>
+      </nav>
+    </aside>
+    <main class="flex-1 p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Quản lý danh mục</h1>
+        <button onclick="openModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Thêm danh mục</button>
+      </div>
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-4 py-3 text-left">ID</th>
+              <th class="px-4 py-3 text-left">Tên danh mục</th>
+              <th class="px-4 py-3 text-left">Mô tả</th>
+              <th class="px-4 py-3 text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="catTable" class="divide-y"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modalTitle" class="font-bold text-gray-800 text-lg">Thêm danh mục</h2>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+      </div>
+      <div id="formErr" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"></div>
+      <form onsubmit="submitCategory(event)" class="space-y-4">
+        <input type="hidden" id="editId">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tên danh mục *</label>
+          <input id="cName" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+          <textarea id="cDesc" rows="2" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">Hủy</button>
+          <button type="submit" id="submitBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+  renderNav();
+  if (!Auth.requireAdmin()) {}
+
+  async function load() {
+    const res = await GET('/category');
+    if (!res?.ok) return;
+    document.getElementById('catTable').innerHTML = res.data.map(c => `
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 text-gray-500">#${c.id}</td>
+        <td class="px-4 py-3 font-medium">${c.name}</td>
+        <td class="px-4 py-3 text-gray-500">${c.description || '—'}</td>
+        <td class="px-4 py-3 text-center space-x-2">
+          <button onclick="editCat(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.description||'').replace(/'/g,"\\'")}')"
+            class="text-blue-600 hover:underline text-xs">Sửa</button>
+          <button onclick="deleteCat(${c.id},'${c.name.replace(/'/g,"\\'")}')"
+            class="text-red-500 hover:underline text-xs">Xóa</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function openModal(data = null) {
+    document.getElementById('editId').value = data?.id || '';
+    document.getElementById('modalTitle').textContent = data ? 'Sửa danh mục' : 'Thêm danh mục';
+    document.getElementById('cName').value  = data?.name || '';
+    document.getElementById('cDesc').value  = data?.description || '';
+    document.getElementById('formErr').classList.add('hidden');
+    document.getElementById('modal').classList.remove('hidden');
+  }
+
+  function editCat(id, name, desc) { openModal({ id, name, description: desc }); }
+  function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+  async function submitCategory(e) {
+    e.preventDefault();
+    const id  = document.getElementById('editId').value;
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+    const body = { name: document.getElementById('cName').value.trim(), description: document.getElementById('cDesc').value.trim() };
+    const res  = id ? await PUT('/category/'+id, body) : await POST('/category', body);
+    if (!res?.ok) {
+      showError(document.getElementById('formErr'), (res?.data?.errors||[res?.data?.error||'Lỗi']).join(', '));
+      btn.disabled = false; btn.textContent = 'Lưu'; return;
+    }
+    showToast(id ? 'Cập nhật thành công' : 'Thêm danh mục thành công');
+    closeModal(); load();
+    btn.disabled = false; btn.textContent = 'Lưu';
+  }
+
+  async function deleteCat(id, name) {
+    if (!confirm(`Xóa danh mục "${name}"?`)) return;
+    const res = await DELETE('/category/' + id);
+    if (res?.ok) { showToast('Đã xóa danh mục'); load(); }
+    else showToast(res?.data?.error || 'Lỗi xóa', 'error');
+  }
+
+  load();
+</script>
+</body>
+</html>
+

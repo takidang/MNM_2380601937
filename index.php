@@ -28,10 +28,23 @@ $url = explode('/', $url);
 // ===== API ROUTING =====
 if (isset($url[0]) && $url[0] === 'api') {
     require_once 'app/config/database.php';
+    require_once 'app/controllers/ApiController.php';
     $db       = (new Database())->getConnection();
     $resource = $url[1] ?? '';
-    $id       = $url[2] ?? null;
     $method   = $_SERVER['REQUEST_METHOD'];
+
+    // Phân tích segment thứ 3: số → $id, chuỗi → $action
+    $seg2   = $url[2] ?? null;
+    $id     = null;
+    $action = null;
+    if ($seg2 !== null) {
+        if (is_numeric($seg2)) {
+            $id = $seg2;
+        } else {
+            $action = $seg2;
+            $id = $url[3] ?? null; // /api/resource/action/id
+        }
+    }
 
     $apiControllerName = ucfirst($resource) . 'ApiController';
     $apiControllerFile = 'app/controllers/' . $apiControllerName . '.php';
@@ -46,11 +59,36 @@ if (isset($url[0]) && $url[0] === 'api') {
     require_once $apiControllerFile;
     $controller = new $apiControllerName($db);
 
+    $call = function($method, $arg = null) use ($controller) {
+        if (!method_exists($controller, $method)) {
+            http_response_code(404);
+            echo json_encode(['error' => "Action '$method' not found"]);
+            exit;
+        }
+        $arg !== null ? $controller->$method($arg) : $controller->$method();
+    };
+
     switch ($method) {
-        case 'GET':    $id ? $controller->show($id) : $controller->index(); break;
-        case 'POST':   $controller->store();      break;
-        case 'PUT':    $controller->update($id);  break;
-        case 'DELETE': $controller->destroy($id); break;
+        case 'OPTIONS':
+            http_response_code(200);
+            break;
+        case 'GET':
+            if ($action)      $call($action, $id);
+            elseif ($id)      $call('show', $id);
+            else              $call('index');
+            break;
+        case 'POST':
+            if ($action)      $call($action, $id);
+            else              $call('store');
+            break;
+        case 'PUT':
+            if ($action)      $call($action, $id ?? $seg2);
+            else              $call('update', $id);
+            break;
+        case 'DELETE':
+            if ($action)      $call('destroy' . ucfirst($action), $id);
+            else              $call('destroy', $id);
+            break;
         default:
             http_response_code(405);
             header('Content-Type: application/json');
@@ -59,24 +97,20 @@ if (isset($url[0]) && $url[0] === 'api') {
     exit;
 }
 
-// Kiểm tra phần đầu tiên của URL để xác định controller
-$controllerName = isset($url[0]) && $url[0] != '' ? ucfirst($url[0]) . 'Controller' :
-'DefaultController';
-// Kiểm tra phần thứ hai của URL để xác định action
-$action = isset($url[1]) && $url[1] != '' ? $url[1] : 'index';
+// ===== NON-API: Redirect về frontend HTML =====
+// Tất cả request không phải /api đều chuyển về frontend tương ứng
+$frontendMap = [
+    ''         => '/frontend/index.html',
+    'login'    => '/frontend/login.html',
+    'register' => '/frontend/register.html',
+    'cart'     => '/frontend/cart.html',
+    'checkout' => '/frontend/checkout.html',
+    'orders'   => '/frontend/orders.html',
+    'shop'     => '/frontend/index.html',
+    'admin'    => '/frontend/admin/index.html',
+];
 
-// die ("controller=$controllerName - action=$action");
-
-// Kiểm tra xem controller và action có tồn tại không
-if (!file_exists('app/controllers/' . $controllerName . '.php')) {
-// Xử lý không tìm thấy controller
-die('Controller not found');
-}
-require_once 'app/controllers/' . $controllerName . '.php';
-$controller = new $controllerName();
-if (!method_exists($controller, $action)) {
-// Xử lý không tìm thấy action
-die('Action not found');
-}
-// Gọi action với các tham số còn lại (nếu có)
-call_user_func_array([$controller, $action], array_slice($url, 2));
+$segment = strtolower($url[0] ?? '');
+$target  = $frontendMap[$segment] ?? '/frontend/index.html';
+header('Location: ' . $target);
+exit;

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập – TECH-SPECTRUM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+<div class="bg-white p-8 rounded-xl shadow w-full max-w-md">
+  <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Đăng nhập</h1>
+  <div id="err" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"></div>
+  <form id="loginForm" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập</label>
+      <input id="username" type="text" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="username" required>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+      <input id="password" type="password" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••" required>
+    </div>
+    <button type="submit" id="btn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-semibold">
+      Đăng nhập
+    </button>
+  </form>
+  <p class="text-center text-sm text-gray-500 mt-4">
+    Chưa có tài khoản? <a href="/frontend/register.html" class="text-blue-600 hover:underline">Đăng ký</a>
+  </p>
+  <p class="text-center text-sm mt-2">
+    <a href="#" onclick="openForgot()" class="text-gray-400 hover:text-blue-600 hover:underline">Quên mật khẩu?</a>
+  </p>
+</div>
+
+<!-- Modal quên mật khẩu -->
+<div id="forgotModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+    <h2 class="font-bold text-gray-800 text-lg mb-4">Quên mật khẩu</h2>
+    <div id="forgotMsg" class="hidden p-3 rounded mb-4 text-sm"></div>
+
+    <div id="stepEmail">
+      <p class="text-sm text-gray-500 mb-3">Nhập email để nhận mã đặt lại mật khẩu.</p>
+      <input id="forgotEmail" type="email" placeholder="email@example.com"
+        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeForgot()" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</button>
+        <button onclick="sendForgot()" id="forgotBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Gửi</button>
+      </div>
+    </div>
+
+    <div id="stepReset" class="hidden">
+      <p class="text-sm text-gray-500 mb-3">Nhập mã reset và mật khẩu mới.</p>
+      <input id="resetToken" placeholder="Mã reset (debug_token)"
+        class="w-full border rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+      <input id="newPassword" type="password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)"
+        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeForgot()" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">Hủy</button>
+        <button onclick="doReset()" id="resetBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Đặt lại</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Nếu đã đăng nhập → chuyển về trang chủ
+  if (Auth.isLoggedIn()) window.location.href = '/frontend/index.html';
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
+    const errEl = document.getElementById('err');
+    errEl.classList.add('hidden');
+
+    const res = await POST('/auth/login', {
+      username: document.getElementById('username').value.trim(),
+      password: document.getElementById('password').value,
+    });
+
+    if (!res || !res.ok) {
+      const msg = res?.data?.error || 'Đăng nhập thất bại';
+      showError(errEl, msg);
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
+      return;
+    }
+
+    Auth.setToken(res.data.token);
+    Auth.setUser(res.data.user);
+
+    const redirect = res.data.user.role === 'admin' ? '/frontend/admin/index.html' : '/frontend/index.html';
+    window.location.href = redirect;
+  });
+
+  function openForgot() {
+    document.getElementById('forgotModal').classList.remove('hidden');
+    document.getElementById('stepEmail').classList.remove('hidden');
+    document.getElementById('stepReset').classList.add('hidden');
+    document.getElementById('forgotMsg').classList.add('hidden');
+    document.getElementById('forgotEmail').value = '';
+    document.getElementById('resetToken').value = '';
+    document.getElementById('newPassword').value = '';
+  }
+
+  function closeForgot() {
+    document.getElementById('forgotModal').classList.add('hidden');
+  }
+
+  async function sendForgot() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) return;
+    const btn = document.getElementById('forgotBtn');
+    btn.disabled = true; btn.textContent = 'Đang gửi...';
+
+    const res = await POST('/auth/forgotPassword', { email });
+    const msgEl = document.getElementById('forgotMsg');
+    msgEl.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+    if (res?.data?.debug_token) {
+      msgEl.classList.add('bg-green-100', 'text-green-700');
+      msgEl.textContent = 'Mã reset: ' + res.data.debug_token;
+      document.getElementById('stepEmail').classList.add('hidden');
+      document.getElementById('stepReset').classList.remove('hidden');
+      document.getElementById('resetToken').value = res.data.debug_token;
+    } else {
+      msgEl.classList.add('bg-green-100', 'text-green-700');
+      msgEl.textContent = res?.data?.message || 'Đã gửi (nếu email tồn tại)';
+    }
+    btn.disabled = false; btn.textContent = 'Gửi';
+  }
+
+  async function doReset() {
+    const token = document.getElementById('resetToken').value.trim();
+    const newPassword = document.getElementById('newPassword').value;
+    if (!token || !newPassword) return;
+    const btn = document.getElementById('resetBtn');
+    btn.disabled = true; btn.textContent = 'Đang xử lý...';
+
+    const res = await POST('/auth/resetPassword', { token, new_password: newPassword });
+    const msgEl = document.getElementById('forgotMsg');
+    msgEl.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+    if (res?.ok) {
+      msgEl.classList.add('bg-green-100', 'text-green-700');
+      msgEl.textContent = 'Đặt lại thành công! Đang chuyển về đăng nhập...';
+      setTimeout(closeForgot, 1500);
+    } else {
+      msgEl.classList.add('bg-red-100', 'text-red-700');
+      msgEl.textContent = res?.data?.error || 'Lỗi đặt lại mật khẩu';
+    }
+    btn.disabled = false; btn.textContent = 'Đặt lại';
+  }
+</script>
+</body>
+</html>

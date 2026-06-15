@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TECH-SPECTRUM – Công nghệ chính hãng</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+  <style>
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div id="nav"></div>
+
+  <!-- BANNER -->
+  <div class="relative overflow-hidden bg-gray-900" style="height:280px">
+    <div id="bannerSlider" class="h-full"></div>
+    <div id="bannerDots" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2"></div>
+    <button onclick="prevSlide()" class="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center text-xl">‹</button>
+    <button onclick="nextSlide()" class="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-full flex items-center justify-center text-xl">›</button>
+  </div>
+
+  <!-- DANH MỤC -->
+  <div class="bg-white shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3">
+      <div id="categoryBar" class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide text-sm">
+        <button onclick="filterCat('')" data-cat=""
+          class="cat-btn shrink-0 px-4 py-1.5 rounded-full border font-medium bg-blue-600 text-white border-blue-600">
+          Tất cả
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 py-6" id="products">
+    <div class="flex flex-col lg:flex-row gap-5">
+
+      <!-- SIDEBAR LỌC -->
+      <aside class="lg:w-56 shrink-0">
+        <div class="bg-white rounded-xl shadow-sm p-4 sticky top-4">
+          <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wide">Bộ lọc</h3>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase">Sắp xếp</label>
+            <select id="sortFilter" onchange="loadProducts(1)" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="newest">Mới nhất</option>
+              <option value="price_asc">Giá tăng dần</option>
+              <option value="price_desc">Giá giảm dần</option>
+              <option value="name_asc">Tên A-Z</option>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase">Khoảng giá</label>
+            <div class="flex items-center gap-2 mb-2">
+              <input id="minPrice" type="number" placeholder="Từ" min="0"
+                class="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div class="flex items-center gap-2">
+              <input id="maxPrice" type="number" placeholder="Đến" min="0"
+                class="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div class="grid grid-cols-2 gap-1 mt-2">
+              <button onclick="setPrice(0,5000000)" class="text-xs border rounded px-2 py-1 hover:bg-blue-50 hover:border-blue-400">Dưới 5tr</button>
+              <button onclick="setPrice(5000000,10000000)" class="text-xs border rounded px-2 py-1 hover:bg-blue-50 hover:border-blue-400">5 – 10tr</button>
+              <button onclick="setPrice(10000000,20000000)" class="text-xs border rounded px-2 py-1 hover:bg-blue-50 hover:border-blue-400">10 – 20tr</button>
+              <button onclick="setPrice(20000000,0)" class="text-xs border rounded px-2 py-1 hover:bg-blue-50 hover:border-blue-400">Trên 20tr</button>
+            </div>
+          </div>
+
+          <button onclick="loadProducts(1)"
+            class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">
+            Áp dụng lọc
+          </button>
+          <button onclick="resetFilter()"
+            class="w-full mt-2 border text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
+            Xóa bộ lọc
+          </button>
+        </div>
+      </aside>
+
+      <!-- NỘI DUNG CHÍNH -->
+      <div class="flex-1">
+        <!-- Thanh tìm kiếm -->
+        <div class="bg-white rounded-xl shadow-sm p-3 mb-4 flex gap-2">
+          <input id="searchInput" type="text" placeholder="Tìm kiếm sản phẩm..."
+            class="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <button onclick="loadProducts(1)" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-medium">Tìm</button>
+        </div>
+
+        <!-- Kết quả -->
+        <div class="flex justify-between items-center mb-3">
+          <span id="resultCount" class="text-sm text-gray-500"></span>
+        </div>
+
+        <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+        <div id="pagination" class="flex justify-center gap-2 mt-8"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  renderNav();
+  let currentPage = 1;
+  let currentCat  = '';
+  let slideIndex  = 0;
+  let bannerData  = [];
+
+  const GRADIENTS = [
+    'linear-gradient(135deg,#1e3a8a,#2563eb)',
+    'linear-gradient(135deg,#581c87,#be185d)',
+    'linear-gradient(135deg,#14532d,#0d9488)',
+    'linear-gradient(135deg,#7c2d12,#ea580c)',
+    'linear-gradient(135deg,#0c4a6e,#0284c7)',
+  ];
+
+  async function loadBanners() {
+    const res = await GET('/banner');
+    bannerData = res?.ok && res.data.length ? res.data : [
+      { title: 'DEAL SỐC MỖI NGÀY',   subtitle: 'Giảm đến 30% cho tất cả sản phẩm công nghệ', button_text: 'Mua ngay',   button_link: '#products' },
+      { title: 'LAPTOP & ĐIỆN THOẠI', subtitle: 'Cấu hình mạnh – Giá tốt nhất thị trường',     button_text: 'Khám phá',   button_link: '#products' },
+      { title: 'PHỤ KIỆN GIÁ RẺ',     subtitle: 'Tai nghe, chuột, bàn phím – Giảm 50%',        button_text: 'Xem ngay',   button_link: '#products' },
+    ];
+
+    const slider = document.getElementById('bannerSlider');
+    const dots   = document.getElementById('bannerDots');
+
+    slider.innerHTML = bannerData.map((b, i) => {
+      const bg = b.image
+        ? `background:url('/public/images/banners/${b.image}') center/cover no-repeat`
+        : `background:${GRADIENTS[i % GRADIENTS.length]}`;
+      return `
+        <div class="banner-slide absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${i === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0'}"
+             style="${bg}">
+          ${b.image ? '<div class="absolute inset-0 bg-black/40"></div>' : ''}
+          <div class="relative text-center text-white px-4">
+            <h2 class="text-4xl font-extrabold mb-3 drop-shadow">${b.title}</h2>
+            ${b.subtitle ? `<p class="text-white/80 mb-5 text-lg drop-shadow">${b.subtitle}</p>` : ''}
+            <a href="${b.button_link || '#products'}"
+               class="bg-white text-gray-800 font-bold px-6 py-3 rounded-full hover:bg-gray-100 transition shadow">
+              ${b.button_text || 'Xem ngay'}
+            </a>
+          </div>
+        </div>`;
+    }).join('');
+
+    dots.innerHTML = bannerData.map((_, i) =>
+      `<button onclick="goSlide(${i})" class="dot w-2.5 h-2.5 rounded-full bg-white ${i === 0 ? 'opacity-80' : 'opacity-40'}"></button>`
+    ).join('');
+
+    if (bannerData.length > 1) setInterval(nextSlide, 4000);
+  }
+
+  function goSlide(n) {
+    const slides = document.querySelectorAll('.banner-slide');
+    const dots   = document.querySelectorAll('.dot');
+    slides[slideIndex].classList.replace('opacity-100','opacity-0');
+    slides[slideIndex].classList.replace('z-10','z-0');
+    dots[slideIndex].classList.replace('opacity-80','opacity-40');
+    slideIndex = (n + bannerData.length) % bannerData.length;
+    slides[slideIndex].classList.replace('opacity-0','opacity-100');
+    slides[slideIndex].classList.replace('z-0','z-10');
+    dots[slideIndex].classList.replace('opacity-40','opacity-80');
+  }
+  function nextSlide() { goSlide(slideIndex + 1); }
+  function prevSlide() { goSlide(slideIndex - 1); }
+
+  async function loadCategories() {
+    const res = await GET('/category');
+    if (!res?.ok) return;
+    const bar = document.getElementById('categoryBar');
+    res.data.forEach(c => {
+      const btn = document.createElement('button');
+      btn.setAttribute('data-cat', c.id);
+      btn.onclick = () => filterCat(c.id);
+      btn.className = 'cat-btn shrink-0 px-4 py-1.5 rounded-full border font-medium text-gray-600 border-gray-300 hover:bg-blue-50 hover:border-blue-400';
+      btn.textContent = c.name;
+      bar.appendChild(btn);
+    });
+  }
+
+  function filterCat(catId) {
+    currentCat = catId;
+    document.querySelectorAll('.cat-btn').forEach(b => {
+      const active = String(b.getAttribute('data-cat')) === String(catId);
+      b.className = 'cat-btn shrink-0 px-4 py-1.5 rounded-full border font-medium ' +
+        (active ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-600 border-gray-300 hover:bg-blue-50 hover:border-blue-400');
+    });
+    loadProducts(1);
+  }
+
+  function setPrice(min, max) {
+    document.getElementById('minPrice').value = min || '';
+    document.getElementById('maxPrice').value = max || '';
+    loadProducts(1);
+  }
+
+  function resetFilter() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('sortFilter').value  = 'newest';
+    document.getElementById('minPrice').value    = '';
+    document.getElementById('maxPrice').value    = '';
+    filterCat('');
+  }
+
+  async function loadProducts(page = 1) {
+    currentPage = page;
+    const q    = document.getElementById('searchInput').value.trim();
+    const sort = document.getElementById('sortFilter').value;
+    const min  = document.getElementById('minPrice').value;
+    const max  = document.getElementById('maxPrice').value;
+
+    let url;
+    if (q) {
+      url = `/product/search?q=${encodeURIComponent(q)}&page=${page}&per_page=12`;
+    } else {
+      url = `/product?page=${page}&per_page=12&sort=${sort}`;
+      if (currentCat) url += '&category_id=' + currentCat;
+      if (min) url += '&min_price=' + min;
+      if (max) url += '&max_price=' + max;
+    }
+
+    const res = await GET(url);
+    const grid = document.getElementById('productGrid');
+    if (!res?.ok) { grid.innerHTML = '<p class="text-red-500 col-span-4">Lỗi tải sản phẩm</p>'; return; }
+
+    const { data, pagination } = res.data;
+    document.getElementById('resultCount').textContent = `Tìm thấy ${pagination?.total ?? data.length} sản phẩm`;
+
+    if (!data.length) {
+      grid.innerHTML = '<p class="text-gray-500 col-span-4 text-center py-16">Không tìm thấy sản phẩm nào.</p>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    grid.innerHTML = data.map(p => `
+      <a href="/frontend/product.html?id=${p.id}"
+        class="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group flex flex-col">
+        <div class="aspect-square overflow-hidden bg-gray-50">
+          <img src="${imgUrl(p.image)}" alt="${p.name}"
+            class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+            onerror="this.src='/public/images/no-image.png'">
+        </div>
+        <div class="p-3 flex flex-col flex-1">
+          <p class="text-xs text-blue-500 font-medium mb-1">${p.category_name || ''}</p>
+          <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 flex-1">${p.name}</h3>
+          <div class="mt-2 flex items-center justify-between">
+            <p class="text-blue-600 font-bold">${formatVND(p.price)}</p>
+          </div>
+          <button class="mt-2 w-full text-xs border border-blue-600 text-blue-600 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-medium">
+            Xem chi tiết
+          </button>
+        </div>
+      </a>
+    `).join('');
+
+    const pages = pagination?.pages || 1;
+    const pag   = document.getElementById('pagination');
+    if (pages <= 1) { pag.innerHTML = ''; return; }
+    let btns = '';
+    for (let i = 1; i <= pages; i++) {
+      btns += `<button onclick="loadProducts(${i})"
+        class="px-3 py-1.5 rounded-lg border text-sm font-medium ${i === currentPage ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100 text-gray-700'}">${i}</button>`;
+    }
+    pag.innerHTML = btns;
+  }
+
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadProducts(1); });
+
+  loadBanners();
+  loadCategories();
+  loadProducts(1);
+</script>
+</body>
+</html>

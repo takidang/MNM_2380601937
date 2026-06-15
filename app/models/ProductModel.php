@@ -171,5 +171,99 @@ class ProductModel
         }
         return $products;
     }
+
+    // 7. Tìm kiếm sản phẩm theo tên
+    public function searchProducts($keyword, $page = 1, $perPage = 10)
+    {
+        $offset  = ($page - 1) * $perPage;
+        $like    = '%' . $keyword . '%';
+        $query   = "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
+                    FROM " . $this->table_name . " p
+                    LEFT JOIN category c ON p.category_id = c.id
+                    WHERE p.name LIKE :kw OR p.description LIKE :kw2
+                    ORDER BY p.name ASC
+                    LIMIT :limit OFFSET :offset";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':kw',     $like);
+        $stmt->bindValue(':kw2',    $like);
+        $stmt->bindValue(':limit',  $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset,  PDO::PARAM_INT);
+        $stmt->execute();
+        return $this->fetchProductRows($stmt);
+    }
+
+    // 8. Lọc + sắp xếp với pagination
+    public function filterProducts($categoryId = null, $sort = 'newest', $minPrice = null, $maxPrice = null, $page = 1, $perPage = 10)
+    {
+        $offset  = ($page - 1) * $perPage;
+        $where   = [];
+        $params  = [];
+
+        if ($categoryId) {
+            $where[]                  = 'p.category_id = :cat';
+            $params[':cat']           = $categoryId;
+        }
+        if ($minPrice !== null) {
+            $where[]                  = 'p.price >= :min';
+            $params[':min']           = $minPrice;
+        }
+        if ($maxPrice !== null) {
+            $where[]                  = 'p.price <= :max';
+            $params[':max']           = $maxPrice;
+        }
+
+        $orderBy = match($sort) {
+            'price_asc'  => 'p.price ASC',
+            'price_desc' => 'p.price DESC',
+            'name_asc'   => 'p.name ASC',
+            default      => 'p.id DESC',
+        };
+
+        $sql = "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
+                FROM " . $this->table_name . " p
+                LEFT JOIN category c ON p.category_id = c.id"
+            . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
+            . " ORDER BY $orderBy LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+        $stmt->bindValue(':limit',  $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset,  PDO::PARAM_INT);
+        $stmt->execute();
+        return $this->fetchProductRows($stmt);
+    }
+
+    // 9. Đếm tổng sản phẩm (cho pagination)
+    public function countProducts($categoryId = null, $keyword = null, $minPrice = null, $maxPrice = null): int
+    {
+        $where  = [];
+        $params = [];
+        if ($categoryId) { $where[] = 'category_id = :cat';  $params[':cat']  = $categoryId; }
+        if ($keyword)    { $where[] = 'name LIKE :kw';       $params[':kw']   = '%'.$keyword.'%'; }
+        if ($minPrice !== null) { $where[] = 'price >= :min'; $params[':min'] = $minPrice; }
+        if ($maxPrice !== null) { $where[] = 'price <= :max'; $params[':max'] = $maxPrice; }
+        $sql  = "SELECT COUNT(*) FROM " . $this->table_name . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    }
+
+    private function fetchProductRows($stmt): array
+    {
+        $products = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $p = new ProductModel($this->conn);
+            $p->id            = $row['id'];
+            $p->name          = $row['name'];
+            $p->description   = $row['description'];
+            $p->price         = $row['price'];
+            $p->image         = $row['image'];
+            $p->category_id   = $row['category_id'];
+            $p->category_name = $row['category_name'];
+            $products[] = $p;
+        }
+        return $products;
+    }
 }
 ?>

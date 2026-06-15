@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giỏ hàng – TECH-SPECTRUM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div id="nav"></div>
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Giỏ hàng</h1>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2" id="cartItems"></div>
+      <div class="bg-white rounded-xl shadow p-5 h-fit" id="summary"></div>
+    </div>
+  </div>
+
+<script>
+  renderNav();
+  if (!Auth.requireLogin()) {}
+
+  async function loadCart() {
+    const res = await GET('/cart');
+    if (!res?.ok) return;
+    renderCart(res.data);
+  }
+
+  function renderCart(cart) {
+    const items = cart.items || [];
+    const el    = document.getElementById('cartItems');
+
+    if (!items.length) {
+      el.innerHTML = `<div class="bg-white rounded-xl shadow p-8 text-center text-gray-500">
+        <p class="text-4xl mb-3">🛒</p>
+        <p>Giỏ hàng của bạn đang trống</p>
+        <a href="/frontend/index.html" class="mt-4 inline-block text-blue-600 hover:underline">Tiếp tục mua sắm</a>
+      </div>`;
+      document.getElementById('summary').innerHTML = '';
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <div class="p-4 border-b flex justify-between items-center">
+          <span class="font-semibold text-gray-700">${items.length} sản phẩm</span>
+          <button onclick="clearCart()" class="text-red-500 text-sm hover:underline">Xóa tất cả</button>
+        </div>
+        ${items.map(item => `
+          <div class="p-4 flex gap-4 items-center border-b last:border-0" id="row-${item.product_id}">
+            <img src="${imgUrl(item.image)}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg"
+                 onerror="this.src='/public/images/no-image.png'">
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800 text-sm">${item.name}</p>
+              ${item.variant_name ? `<p class="text-xs text-gray-500">Biến thể: ${item.variant_name}</p>` : ''}
+              <p class="text-blue-600 font-bold text-sm mt-1">${formatVND(item.price)}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" value="${item.quantity}" min="1"
+                class="border rounded w-16 text-center text-sm py-1"
+                onchange="updateItem(${item.product_id}, this.value)">
+              <button onclick="removeItem(${item.product_id})" class="text-red-400 hover:text-red-600 text-lg">✕</button>
+            </div>
+            <p class="font-bold text-gray-800 text-sm w-24 text-right">${formatVND(item.line_total)}</p>
+          </div>
+        `).join('')}
+      </div>`;
+
+    // Summary
+    document.getElementById('summary').innerHTML = `
+      <h2 class="font-bold text-gray-800 text-lg mb-4">Tóm tắt</h2>
+      <div class="space-y-2 text-sm text-gray-700">
+        <div class="flex justify-between"><span>Tạm tính</span><span>${formatVND(cart.subtotal)}</span></div>
+        ${cart.coupon_code ? `<div class="flex justify-between text-green-600">
+          <span>Giảm giá (${cart.coupon_code})</span><span>-${formatVND(cart.discount)}</span>
+        </div>` : ''}
+        <div class="border-t pt-2 flex justify-between font-bold text-base">
+          <span>Tổng cộng</span><span class="text-blue-600">${formatVND(cart.total)}</span>
+        </div>
+      </div>
+      <!-- Coupon -->
+      <div class="mt-4">
+        <div class="flex gap-2">
+          <input id="couponCode" type="text" placeholder="Mã giảm giá" value="${cart.coupon_code || ''}"
+            class="border rounded-lg px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <button onclick="applyCoupon()" class="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700">Áp dụng</button>
+        </div>
+        ${cart.coupon_code ? `<button onclick="removeCoupon()" class="text-sm text-red-500 hover:underline mt-1">Xóa mã giảm giá</button>` : ''}
+        <div id="couponMsg" class="text-sm mt-1 hidden"></div>
+      </div>
+      <a href="/frontend/checkout.html" class="mt-5 block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700">
+        Tiến hành đặt hàng →
+      </a>
+      <a href="/frontend/index.html" class="mt-2 block w-full text-center text-gray-500 text-sm hover:underline">← Tiếp tục mua sắm</a>`;
+  }
+
+  async function updateItem(productId, qty) {
+    const res = await PUT('/cart/' + productId, { quantity: parseInt(qty) || 0 });
+    if (res?.ok) loadCart();
+  }
+
+  async function removeItem(productId) {
+    const res = await DELETE('/cart/' + productId);
+    if (res?.ok) loadCart();
+  }
+
+  async function clearCart() {
+    if (!confirm('Xóa toàn bộ giỏ hàng?')) return;
+    const res = await DELETE('/cart');
+    if (res?.ok) loadCart();
+  }
+
+  async function applyCoupon() {
+    const code = document.getElementById('couponCode').value.trim();
+    if (!code) return;
+    const res = await POST('/cart/coupon', { code });
+    const msgEl = document.getElementById('couponMsg');
+    msgEl.classList.remove('hidden');
+    if (res?.ok) {
+      msgEl.className = 'text-sm mt-1 text-green-600';
+      msgEl.textContent = `Áp dụng thành công! Giảm ${formatVND(res.data.discount)}`;
+      setTimeout(() => loadCart(), 800);
+    } else {
+      msgEl.className = 'text-sm mt-1 text-red-500';
+      msgEl.textContent = res?.data?.error || 'Mã không hợp lệ';
+    }
+  }
+
+  async function removeCoupon() {
+    await DELETE('/cart/coupon');
+    loadCart();
+  }
+
+  loadCart();
+</script>
+</body>
+</html>

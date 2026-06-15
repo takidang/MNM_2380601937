@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hồ sơ cá nhân – TECH-SPECTRUM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div id="nav"></div>
+
+  <div class="max-w-2xl mx-auto px-4 py-10">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Hồ sơ cá nhân</h1>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <!-- Avatar section -->
+      <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-8 flex items-center gap-5">
+        <div class="relative">
+          <img id="avatarImg" src="/public/images/no-image.png"
+            class="w-20 h-20 rounded-full object-cover border-4 border-white shadow"
+            onerror="this.src='/public/images/no-image.png'">
+          <label for="avatarInput"
+            class="absolute bottom-0 right-0 bg-white text-blue-600 rounded-full w-7 h-7 flex items-center justify-center cursor-pointer shadow hover:bg-blue-50 text-sm font-bold">
+            ✎
+          </label>
+          <input type="file" id="avatarInput" accept="image/*" class="hidden">
+        </div>
+        <div class="text-white">
+          <p id="headerName" class="text-xl font-bold">...</p>
+          <p id="headerRole" class="text-blue-200 text-sm capitalize"></p>
+          <p id="headerDate" class="text-blue-200 text-xs mt-1"></p>
+        </div>
+      </div>
+
+      <!-- Toast upload avatar -->
+      <div id="avatarMsg" class="hidden px-6 py-2 text-sm"></div>
+
+      <!-- Profile form -->
+      <div class="p-6">
+        <h2 class="font-semibold text-gray-700 mb-4">Thông tin cá nhân</h2>
+        <div id="profileErr" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"></div>
+        <div id="profileOk"  class="hidden bg-green-100 text-green-700 p-3 rounded mb-4 text-sm"></div>
+
+        <form id="profileForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập</label>
+            <input id="fUsername" disabled class="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-400 cursor-not-allowed">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+            <input id="fFullname" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Nhập họ và tên">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="fEmail" type="email" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="email@example.com">
+          </div>
+          <button type="submit" id="saveBtn"
+            class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700">
+            Lưu thay đổi
+          </button>
+        </form>
+
+        <hr class="my-6">
+
+        <!-- Đổi mật khẩu -->
+        <h2 class="font-semibold text-gray-700 mb-4">Đổi mật khẩu</h2>
+        <div id="pwErr" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"></div>
+        <div id="pwOk"  class="hidden bg-green-100 text-green-700 p-3 rounded mb-4 text-sm"></div>
+
+        <form id="pwForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu hiện tại</label>
+            <input id="oldPw" type="password" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
+            <input id="newPw" type="password" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu mới</label>
+            <input id="confirmPw" type="password" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+          <button type="submit" id="pwBtn"
+            class="w-full bg-gray-700 text-white py-2 rounded-lg font-semibold hover:bg-gray-800">
+            Đổi mật khẩu
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<script>
+  renderNav();
+  if (!Auth.requireLogin()) {}
+
+  const AVATAR_BASE = '/public/images/avatars/';
+
+  async function loadProfile() {
+    const res = await GET('/user/profile');
+    if (!res?.ok) return;
+    const u = res.data;
+
+    document.getElementById('fUsername').value = u.username || '';
+    document.getElementById('fFullname').value = u.fullname || '';
+    document.getElementById('fEmail').value    = u.email    || '';
+    document.getElementById('headerName').textContent = u.fullname || u.username;
+    document.getElementById('headerRole').textContent = u.role === 'admin' ? 'Quản trị viên' : 'Khách hàng';
+    document.getElementById('headerDate').textContent = u.created_at
+      ? 'Tham gia: ' + new Date(u.created_at).toLocaleDateString('vi-VN') : '';
+
+    if (u.avatar) {
+      document.getElementById('avatarImg').src = AVATAR_BASE + u.avatar;
+    }
+  }
+
+  // Upload avatar khi chọn file
+  document.getElementById('avatarInput').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+
+    const msgEl = document.getElementById('avatarMsg');
+    msgEl.className = 'px-6 py-2 text-sm bg-blue-50 text-blue-600';
+    msgEl.classList.remove('hidden');
+    msgEl.textContent = 'Đang tải ảnh...';
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const res = await fetch('/api/user/avatar', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + Auth.getToken() },
+      body: formData,
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok) {
+      document.getElementById('avatarImg').src = AVATAR_BASE + data.avatar + '?t=' + Date.now();
+      msgEl.className = 'px-6 py-2 text-sm bg-green-50 text-green-700';
+      msgEl.textContent = 'Cập nhật ảnh đại diện thành công!';
+
+      // Cập nhật user trong localStorage
+      const user = Auth.getUser();
+      if (user) { user.avatar = data.avatar; Auth.setUser(user); }
+    } else {
+      msgEl.className = 'px-6 py-2 text-sm bg-red-50 text-red-600';
+      msgEl.textContent = data?.error || 'Lỗi upload ảnh';
+    }
+    setTimeout(() => msgEl.classList.add('hidden'), 3000);
+  });
+
+  // Lưu profile
+  document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+
+    const errEl = document.getElementById('profileErr');
+    const okEl  = document.getElementById('profileOk');
+    errEl.classList.add('hidden'); okEl.classList.add('hidden');
+
+    const res = await PUT('/user/profile', {
+      fullname: document.getElementById('fFullname').value.trim(),
+      email:    document.getElementById('fEmail').value.trim(),
+    });
+
+    if (res?.ok) {
+      okEl.textContent = 'Cập nhật hồ sơ thành công!';
+      okEl.classList.remove('hidden');
+      document.getElementById('headerName').textContent = document.getElementById('fFullname').value.trim();
+      const user = Auth.getUser();
+      if (user) {
+        user.fullname = document.getElementById('fFullname').value.trim();
+        Auth.setUser(user);
+      }
+    } else {
+      const msg = (res?.data?.errors || [res?.data?.error || 'Lỗi']).join(', ');
+      errEl.textContent = msg; errEl.classList.remove('hidden');
+    }
+    btn.disabled = false; btn.textContent = 'Lưu thay đổi';
+  });
+
+  // Đổi mật khẩu
+  document.getElementById('pwForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('pwBtn');
+    btn.disabled = true; btn.textContent = 'Đang xử lý...';
+
+    const errEl = document.getElementById('pwErr');
+    const okEl  = document.getElementById('pwOk');
+    errEl.classList.add('hidden'); okEl.classList.add('hidden');
+
+    const newPw     = document.getElementById('newPw').value;
+    const confirmPw = document.getElementById('confirmPw').value;
+
+    if (newPw !== confirmPw) {
+      errEl.textContent = 'Mật khẩu xác nhận không khớp';
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Đổi mật khẩu';
+      return;
+    }
+
+    const res = await POST('/auth/changePassword', {
+      old_password: document.getElementById('oldPw').value,
+      new_password: newPw,
+    });
+
+    if (res?.ok) {
+      okEl.textContent = 'Đổi mật khẩu thành công!';
+      okEl.classList.remove('hidden');
+      document.getElementById('pwForm').reset();
+    } else {
+      errEl.textContent = res?.data?.error || 'Lỗi đổi mật khẩu';
+      errEl.classList.remove('hidden');
+    }
+    btn.disabled = false; btn.textContent = 'Đổi mật khẩu';
+  });
+
+  loadProfile();
+</script>
+</body>
+</html>

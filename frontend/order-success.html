@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đặt hàng thành công – TECH-SPECTRUM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/frontend/js/api.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div id="nav"></div>
+  <div class="max-w-lg mx-auto px-4 py-16 text-center">
+    <div class="bg-white rounded-xl shadow p-10">
+      <div class="text-6xl mb-4">✅</div>
+      <h1 class="text-2xl font-bold text-green-600 mb-2">Đặt hàng thành công!</h1>
+      <p id="orderInfo" class="text-gray-600 mt-2"></p>
+      <div class="mt-6 flex gap-3 justify-center">
+        <a href="/frontend/orders.html" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">Xem đơn hàng</a>
+        <a href="/frontend/index.html" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300">Tiếp tục mua sắm</a>
+      </div>
+    </div>
+  </div>
+<script>
+  renderNav();
+  const id = new URLSearchParams(location.search).get('id');
+  if (id) document.getElementById('orderInfo').textContent = `Mã đơn hàng của bạn: #${id}`;
+</script>
+</body>
+</html>
